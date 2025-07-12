@@ -2,8 +2,7 @@
 
 Este repositorio contiene el proyecto final para el Módulo 4 del curso de Blockchain. El objetivo es construir un frontend completamente funcional y un conjunto de tests para un contrato inteligente de intercambio de tokens (SimpleSwap) desarrollado en el Módulo 3.
 
-**Live Demo:** [Ver Video de Demostración](https-://ENLACE-A-TU-VIDEO-AQUI)
-<!-- ¡Importante! Reemplaza el enlace de arriba con la URL real de tu video en YouTube o Google Drive. -->
+**Live Demo:** [https://simpleswap-dapp.vercel.app](https://simpleswap-dapp.vercel.app)
 
 ---
 
