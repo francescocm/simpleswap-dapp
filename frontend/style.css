@@ -1,0 +1,154 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #121212;
+    color: #e0e0e0;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.container { 
+    width: 100%; 
+    max-width: 480px; 
+}
+
+header { 
+    width: 100%; 
+    max-width: 480px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 30px; 
+}
+
+header h1 { 
+    font-size: 24px; 
+    color: #ffffff; 
+}
+
+.wallet-info { 
+    text-align: right; 
+}
+
+#walletStatus, #walletAddress { 
+    font-size: 12px; 
+    margin: 2px 0; 
+    color: #a0a0a0; 
+    word-break: break-all; 
+}
+
+.card { 
+    background-color: #1e1e1e; 
+    border-radius: 16px; 
+    padding: 20px; 
+    border: 1px solid #333; 
+}
+
+.card h2 { 
+    margin-top: 0; 
+    text-align: center; 
+}
+
+.input-group { 
+    background-color: #2a2a2a; 
+    border-radius: 12px; 
+    padding: 15px; 
+    margin-bottom: 10px; 
+}
+
+.input-group label { 
+    display: block; 
+    font-size: 14px; 
+    color: #a0a0a0; 
+    margin-bottom: 8px; 
+}
+
+.input-group input { 
+    width: 100%; 
+    background: none; 
+    border: none; 
+    color: #ffffff; 
+    font-size: 24px; 
+    outline: none; 
+    padding: 0; 
+}
+
+input::placeholder { 
+    color: #555; 
+}
+
+.swap-arrow { 
+    text-align: center; 
+    font-size: 24px; 
+    color: #a0a0a0; 
+    margin: -5px 0; 
+}
+
+button { 
+    background-color: #007bff; 
+    color: white; 
+    border: none; 
+    padding: 10px 15px; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    font-size: 16px; 
+    transition: background-color 0.2s; 
+}
+
+button:hover { 
+    background-color: #0056b3; 
+}
+
+.cta-button { 
+    width: 100%; 
+    padding: 15px; 
+    font-size: 18px; 
+    font-weight: bold; 
+    margin-top: 15px; 
+}
+
+.cta-button:disabled { 
+    background-color: #333; 
+    color: #666; 
+    cursor: not-allowed; 
+}
+
+.notifications-area { 
+    margin-top: 20px; 
+    padding: 15px; 
+    background-color: #1e1e1e; 
+    border: 1px solid #333; 
+    border-radius: 8px; 
+    text-align: center; 
+    color: #a0a0a0; 
+    min-height: 50px; 
+}
+
+#invert-button-container button {
+    background-color: #333;
+    border: 1px solid #555;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    line-height: 40px;
+    padding: 0;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+#invert-button-container button:hover {
+    background-color: #444;
+    transform: rotate(180deg);
+}
+
+/* NEW STYLES FOR PRICE DISPLAY */
+.price-info {
+    text-align: center;
+    margin: 15px 0 5px 0;
+    color: #a0a0a0;
+    font-size: 14px;
+    height: 20px; /* Ensures layout doesn't jump while loading */
+}

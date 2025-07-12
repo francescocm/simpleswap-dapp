@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleSwap DApp - Módulo 4</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>SimpleSwap DApp</h1>
+        <div class="wallet-info">
+            <button id="connectWalletBtn">Conectar Billetera</button>
+            <p id="walletStatus">Estado: Desconectado</p>
+            <p id="walletAddress"></p>
+        </div>
+    </header>
+    <main class="container">
+        <!-- Main swap interface card -->
+        <div id="swapInterface" class="card">
+            <h2>Realizar Intercambio</h2>
+            
+            <!-- Input group for the token to send -->
+            <div class="input-group">
+                <label for="amountIn" id="labelAmountIn">Enviar (Token A)</label>
+                <input type="number" id="amountIn" placeholder="0.0" step="any">
+            </div>
+            
+            <!-- Invert button container -->
+            <div id="invert-button-container" class="swap-arrow">
+                <button id="invertBtn">&#x21c5;</button> 
+            </div>
+
+            <!-- Input group for the token to receive -->
+            <div class="input-group">
+                <label for="amountOut" id="labelAmountOut">Recibir (Token B)</label>
+                <input type="number" id="amountOut" placeholder="Estimado..." readonly>
+            </div>
+            
+            <!-- NEW: Price display area -->
+            <div id="price-display" class="price-info">
+                <p id="priceText">Conecte la billetera para ver el precio</p>
+            </div>
+
+            <!-- Call to action button for swapping -->
+            <button id="swapBtn" class="cta-button" disabled>Seleccione montos para intercambiar</button>
+        </div>
+        
+        <!-- Area for transaction status messages -->
+        <div id="notifications" class="notifications-area">
+            <p>Aquí se mostrarán los mensajes de estado de la transacción.</p>
+        </div>
+    </main>
+    
+    <!-- Link to the JavaScript module -->
+    <script src="app.js" type="module"></script>
+</body>
+</html>
