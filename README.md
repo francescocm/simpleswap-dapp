@@ -2,7 +2,8 @@
 
 Este repositorio contiene el proyecto final para el Módulo 4 del curso de Blockchain. El objetivo es construir un frontend completamente funcional y un conjunto de tests para un contrato inteligente de intercambio de tokens (SimpleSwap) desarrollado en el Módulo 3.
 
-**Live Demo:** [URL de tu despliegue en Vercel se insertará aquí]
+**Live Demo:** [Ver Video de Demostración](https-://ENLACE-A-TU-VIDEO-AQUI)
+<!-- ¡Importante! Reemplaza el enlace de arriba con la URL real de tu video en YouTube o Google Drive. -->
 
 ---
 
@@ -27,7 +28,7 @@ La DApp implementa todas las funcionalidades requeridas para un exchange descent
 *   **Testing:** Hardhat (con Chai & Ethers)
 *   **Dependencias de Contratos:** OpenZeppelin Contracts (para MockERC20)
 *   **Frontend:** HTML5, CSS3, JavaScript (ESM)
-*   **Despliegue:** Vercel
+*   **Despliegue:** Video de demostración (ver enlace arriba).
 
 ---
 
@@ -38,19 +39,21 @@ Siga estos pasos para configurar y ejecutar el proyecto en su máquina local.
 ### Prerrequisitos
 
 *   Node.js (v18 o superior)
-*   NPM
+*   NPM / NPX
+*   Git
 *   MetaMask (extensión del navegador)
 
 ### 1. Clonar el Repositorio
 
 ```bash
-git clone [URL de tu repositorio de GitHub se insertará aquí]
-cd nombre-del-repositorio
+git clone https://github.com/francescocm/simpleswap-dapp.git
+cd simpleswap-dapp
 
 2. Instalar Dependencias
 Instale todas las dependencias del proyecto necesarias para Hardhat.
 bash
 npm install
+
 3. Iniciar el Nodo Local de Hardhat
 Este comando iniciará una blockchain local en su máquina. Dejar esta terminal abierta.
 bash
