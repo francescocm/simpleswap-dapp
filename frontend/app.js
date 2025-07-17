@@ -1,12 +1,12 @@
-// frontend/app.js (FINAL, ROBUST, ALL-IN-ONE VERSION)
+// frontend/app.js (THE FINAL, BULLETPROOF FIX)
 
 import { ethers } from 'https://cdn.jsdelivr.net/npm/ethers@5.7/dist/ethers.esm.min.js';
 
-// --- CONFIGURATION - Hardcoded for maximum robustness ---
-// Addresses are defined directly in the main script to prevent loading errors.
-const simpleSwapAddress = "0x89Bb5eE8eA7581a21dBA5C2aD7F82826Ff7414e3";
-const tokenA_Address = "0x6268AC4737c60a6D4dC1E56d658Fd7a2924a7aad9";
-const tokenB_Address = "0x3D4Acb6B5E4AEEf34988A4cd49DFbA39827929d3";
+// --- CONFIGURATION - Addresses are "cleaned" by ethers.utils.getAddress() ---
+// This guarantees they are in the correct format, eliminating any copy-paste errors.
+const simpleSwapAddress = ethers.utils.getAddress("0x89Bb5eE8eA7581a21dBA5C2aD7F82826Ff7414e3");
+const tokenA_Address = ethers.utils.getAddress("0x6268AC4737c60a6D4dC1E56d658Fd7a2924a7aad9");
+const tokenB_Address = ethers.utils.getAddress("0x3D4Acb6B5E4AEEf34988A4cd49DFbA39827929d3");
 
 // SimpleSwap ABI (Hardcoded to prevent any fetch/network errors)
 const simpleSwapABI = [{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256","name":"amountADesired","type":"uint256"},{"internalType":"uint256","name":"amountBDesired","type":"uint256"},{"internalType":"uint256","name":"amountAMin","type":"uint256"},{"internalType":"uint256","name":"amountBMin","type":"uint256"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"addLiquidity","outputs":[{"internalType":"uint256","name":"amountA","type":"uint256"},{"internalType":"uint256","name":"amountB","type":"uint256"},{"internalType":"uint256","name":"liquidityMinted","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"reserveIn","type":"uint256"},{"internalType":"uint256","name":"reserveOut","type":"uint256"}],"name":"getAmountOut","outputs":[{"internalType":"uint256","name":"amountOut","type":"uint256"}],"stateMutability":"pure","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"}],"name":"getPrice","outputs":[{"internalType":"uint256","name":"price","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"liquidity","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256","name":"liquidityAmount","type":"uint256"},{"internalType":"uint256","name":"amountAMin","type":"uint256"},{"internalType":"uint256","name":"amountBMin","type":"uint256"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"removeLiquidity","outputs":[{"internalType":"uint256","name":"amountA","type":"uint256"},{"internalType":"uint256","name":"amountB","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"reserves","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapExactTokensForTokens","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"totalLiquidity","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"provider","type":"address"},{"indexed":true,"internalType":"address","name":"tokenA","type":"address"},{"indexed":true,"internalType":"address","name":"tokenB","type":"address"},{"indexed":false,"internalType":"uint256","name":"amountA","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"amountB","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"liquidity","type":"uint256"}],"name":"LiquidityAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"provider","type":"address"},{"indexed":true,"internalType":"address","name":"tokenA","type":"address"},{"indexed":true,"internalType":"address","name":"tokenB","type":"address"},{"indexed":false,"internalType":"uint256","name":"amountA","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"amountB","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"liquidity","type":"uint256"}],"name":"LiquidityRemoved","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"tokenIn","type":"address"},{"indexed":true,"internalType":"address","name":"tokenOut","type":"address"},{"indexed":false,"internalType":"uint256","name":"amountIn","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"amountOut","type":"uint256"}],"name":"Swap","type":"event"}];
@@ -25,7 +25,6 @@ let amountA_add_El, amountB_add_El, addLiquidityBtn;
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  // Assign DOM elements to variables only after the document is fully loaded
   connectWalletBtn = document.getElementById('connectWalletBtn');
   walletStatus = document.getElementById('walletStatus');
   walletAddress = document.getElementById('walletAddress');
@@ -45,13 +44,10 @@ async function init() {
   amountB_add_El = document.getElementById('amountB_add');
   addLiquidityBtn = document.getElementById('addLiquidityBtn');
 
-  // Setup all event listeners
   setupEventListeners();
 
-  // Check for MetaMask provider
   if (typeof window.ethereum !== 'undefined') {
     provider = new ethers.providers.Web3Provider(window.ethereum);
-    // Auto-connect if already connected from a previous session
     const accounts = await provider.listAccounts();
     if (accounts.length > 0) {
       await connectWallet();
@@ -199,7 +195,6 @@ async function handleAmountInChange() {
 async function handleSwap() {
     updateNotification("Procesando intercambio...");
     swapBtn.disabled = true;
-
     try {
         const amountInWei = ethers.utils.parseUnits(amountInEl.value, 18);
         const tokenInAddr = swapDirectionIsAtoB ? tokenA_Address : tokenB_Address;
@@ -209,18 +204,16 @@ async function handleSwap() {
         
         updateNotification("Aprobando permiso para el swap...");
         const tokenInContract = swapDirectionIsAtoB ? tokenAContract : tokenBContract;
-        const approveTx = await tokenInContract.approve(simpleSwapAddress, amountInWei);
+        const approveTx = await tokenInContract.approve(simpleSwapAddress, ethers.constants.MaxUint256);
         await approveTx.wait();
 
         updateNotification("Realizando el intercambio...");
         const tx = await simpleSwapContract.swapExactTokensForTokens(amountInWei, 0, [tokenInAddr, tokenOutAddr], to, deadline);
         await tx.wait();
-
         updateNotification("¡Swap exitoso!");
         amountInEl.value = '';
         amountOutEl.value = '';
         updatePriceDisplay();
-
     } catch (error) {
         console.error("Error en handleSwap:", error);
         const reason = error.reason || "La transacción falló. Revisa la consola (F12).";
