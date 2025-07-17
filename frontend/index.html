@@ -16,43 +16,42 @@
         </div>
     </header>
     <main class="container">
-        <!-- Main swap interface card -->
-        <div id="swapInterface" class="card">
-            <h2>Realizar Intercambio</h2>
-            
-            <!-- Input group for the token to send -->
-            <div class="input-group">
-                <label for="amountIn" id="labelAmountIn">Enviar (Token A)</label>
-                <input type="number" id="amountIn" placeholder="0.0" step="any">
-            </div>
-            
-            <!-- Invert button container -->
-            <div id="invert-button-container" class="swap-arrow">
-                <button id="invertBtn">&#x21c5;</button> 
-            </div>
-
-            <!-- Input group for the token to receive -->
-            <div class="input-group">
-                <label for="amountOut" id="labelAmountOut">Recibir (Token B)</label>
-                <input type="number" id="amountOut" placeholder="Estimado..." readonly>
-            </div>
-            
-            <!-- NEW: Price display area -->
-            <div id="price-display" class="price-info">
-                <p id="priceText">Conecte la billetera para ver el precio</p>
-            </div>
-
-            <!-- Call to action button for swapping -->
-            <button id="swapBtn" class="cta-button" disabled>Seleccione montos para intercambiar</button>
+        <!-- NEW: TABS FOR NAVIGATION -->
+        <div class="tabs">
+            <button id="tabSwap" class="tab-button active">Swap</button>
+            <button id="tabPool" class="tab-button">Pool</button>
         </div>
-        
-        <!-- Area for transaction status messages -->
+
+        <!-- SWAP INTERFACE (will be hidden/shown by JS) -->
+        <div id="swapInterface" class="card">
+            <!-- ... (Tu interfaz de swap existente no cambia) ... -->
+            <h2>Realizar Intercambio</h2>
+            <div class="input-group"><label for="amountIn" id="labelAmountIn">Enviar (Token A)</label><input type="number" id="amountIn" placeholder="0.0" step="any"></div>
+            <div id="invert-button-container" class="swap-arrow"><button id="invertBtn">&#x21c5;</button></div>
+            <div class="input-group"><label for="amountOut" id="labelAmountOut">Recibir (Token B)</label><input type="number" id="amountOut" placeholder="Estimado..." readonly></div>
+            <div id="price-display" class="price-info"><p id="priceText">Cargando precio...</p></div>
+            <button id="swapBtn" class="cta-button" disabled>Intercambiar</button>
+        </div>
+
+        <!-- NEW: LIQUIDITY POOL INTERFACE (hidden by default) -->
+        <div id="poolInterface" class="card" style="display: none;">
+            <h2>Añadir Liquidez</h2>
+            <p class="info-text">Como primer proveedor, la proporción que establezcas determinará el precio inicial del pool.</p>
+            <div class="input-group">
+                <label for="amountA_add">Monto Token A</label>
+                <input type="number" id="amountA_add" placeholder="0.0" step="any">
+            </div>
+            <div class="input-group">
+                <label for="amountB_add">Monto Token B</label>
+                <input type="number" id="amountB_add" placeholder="0.0" step="any">
+            </div>
+            <button id="addLiquidityBtn" class="cta-button">Añadir Liquidez</button>
+        </div>
+
         <div id="notifications" class="notifications-area">
-            <p>Aquí se mostrarán los mensajes de estado de la transacción.</p>
+            <p>Aquí se mostrarán los mensajes de estado.</p>
         </div>
     </main>
-    
-    <!-- Link to the JavaScript module -->
     <script src="app.js" type="module"></script>
 </body>
 </html>
