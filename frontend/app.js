@@ -1,255 +1,304 @@
-// frontend/app.js (THE FINAL, BULLETPROOF FIX)
+// =============================================================================
+//  SimpleSwap DApp Frontend Logic - Final Version (Tailored for specific HTML)
+//  Author: Your AI Mentor
+//  Description: A complete, self-contained script adjusted to the provided
+//               index.html, including swap inversion logic.
+// =============================================================================
 
-import { ethers } from 'https://cdn.jsdelivr.net/npm/ethers@5.7/dist/ethers.esm.min.js';
+import { ethers } from "https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.esm.min.js";
 
-// --- CONFIGURATION - Addresses are "cleaned" by ethers.utils.getAddress() ---
-// This guarantees they are in the correct format, eliminating any copy-paste errors.
-const simpleSwapAddress = ethers.utils.getAddress("0x89Bb5eE8eA7581a21dBA5C2aD7F82826Ff7414e3");
-const tokenA_Address = ethers.utils.getAddress("0x6268AC4737c60a6D4dC1E56d658Fd7a2924a7aad9");
-const tokenB_Address = ethers.utils.getAddress("0x3D4Acb6B5E4AEEf34988A4cd49DFbA39827929d3");
+// =============================================================================
+//  CONFIGURATION (CONTRACT ADDRESSES & ABIs)
+// =============================================================================
 
-// SimpleSwap ABI (Hardcoded to prevent any fetch/network errors)
-const simpleSwapABI = [{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256","name":"amountADesired","type":"uint256"},{"internalType":"uint256","name":"amountBDesired","type":"uint256"},{"internalType":"uint256","name":"amountAMin","type":"uint256"},{"internalType":"uint256","name":"amountBMin","type":"uint256"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"addLiquidity","outputs":[{"internalType":"uint256","name":"amountA","type":"uint256"},{"internalType":"uint256","name":"amountB","type":"uint256"},{"internalType":"uint256","name":"liquidityMinted","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"reserveIn","type":"uint256"},{"internalType":"uint256","name":"reserveOut","type":"uint256"}],"name":"getAmountOut","outputs":[{"internalType":"uint256","name":"amountOut","type":"uint256"}],"stateMutability":"pure","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"}],"name":"getPrice","outputs":[{"internalType":"uint256","name":"price","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"liquidity","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256","name":"liquidityAmount","type":"uint256"},{"internalType":"uint256","name":"amountAMin","type":"uint256"},{"internalType":"uint256","name":"amountBMin","type":"uint256"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"removeLiquidity","outputs":[{"internalType":"uint256","name":"amountA","type":"uint256"},{"internalType":"uint256","name":"amountB","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"reserves","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapExactTokensForTokens","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"totalLiquidity","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"provider","type":"address"},{"indexed":true,"internalType":"address","name":"tokenA","type":"address"},{"indexed":true,"internalType":"address","name":"tokenB","type":"address"},{"indexed":false,"internalType":"uint256","name":"amountA","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"amountB","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"liquidity","type":"uint256"}],"name":"LiquidityAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"provider","type":"address"},{"indexed":true,"internalType":"address","name":"tokenA","type":"address"},{"indexed":true,"internalType":"address","name":"tokenB","type":"address"},{"indexed":false,"internalType":"uint256","name":"amountA","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"amountB","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"liquidity","type":"uint256"}],"name":"LiquidityRemoved","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"tokenIn","type":"address"},{"indexed":true,"internalType":"address","name":"tokenOut","type":"address"},{"indexed":false,"internalType":"uint256","name":"amountIn","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"amountOut","type":"uint256"}],"name":"Swap","type":"event"}];
+const simpleSwapAddress = "0x89Bb5eE8eA7581a21dBA5C2aD7F82826Ff7414e3";
+const tokenAAddress = "0x6268AC4737c60a6D4dC1E56d658Fd7a2924a7aad"; // TKA
+const tokenBAddress = "0x3D4Acb6B5E4AEEf34988A4cd49DFbA39827929d3"; // TKB
 
-// --- GLOBAL STATE ---
-let provider, signer, simpleSwapContract, tokenAContract, tokenBContract;
-let swapDirectionIsAtoB = true;
+const simpleSwapABI = [
+    "function addLiquidity(uint256 amountADesired, uint256 amountBDesired) external returns (uint256 amountA, uint256 amountB)",
+    "function getReserves() public view returns (uint256, uint256)",
+    "function swap(address tokenIn, uint256 amountIn) external returns (uint256 amountOut)",
+    "function tokenA() public view returns (address)",
+    "function tokenB() public view returns (address)"
+];
 
-// --- DOM ELEMENTS ---
-let connectWalletBtn, walletStatus, walletAddress, swapBtn, notifications,
-    tabSwap, tabPool, swapInterface, poolInterface;
-let amountInEl, amountOutEl, invertBtn, labelAmountIn, labelAmountOut, priceTextEl;
-let amountA_add_El, amountB_add_El, addLiquidityBtn;
+const erc20ABI = [
+    "function approve(address spender, uint256 amount) external returns (bool)",
+    "function balanceOf(address account) external view returns (uint256)",
+    "function symbol() external view returns (string)"
+];
 
-// --- INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', init);
+// =============================================================================
+//  APPLICATION STATE
+// =============================================================================
+let state = {
+    provider: null,
+    signer: null,
+    userAddress: null,
+    simpleSwapContract: null,
+    tokenAContract: null,
+    tokenBContract: null,
+    tokenASymbol: 'TKA',
+    tokenBSymbol: 'TKB',
+    isSwapInverted: false // false: A->B, true: B->A
+};
 
-async function init() {
-  connectWalletBtn = document.getElementById('connectWalletBtn');
-  walletStatus = document.getElementById('walletStatus');
-  walletAddress = document.getElementById('walletAddress');
-  notifications = document.getElementById('notifications');
-  tabSwap = document.getElementById('tabSwap');
-  tabPool = document.getElementById('tabPool');
-  swapInterface = document.getElementById('swapInterface');
-  poolInterface = document.getElementById('poolInterface');
-  amountInEl = document.getElementById('amountIn');
-  amountOutEl = document.getElementById('amountOut');
-  swapBtn = document.getElementById('swapBtn');
-  invertBtn = document.getElementById('invertBtn');
-  labelAmountIn = document.getElementById('labelAmountIn');
-  labelAmountOut = document.getElementById('labelAmountOut');
-  priceTextEl = document.getElementById('priceText');
-  amountA_add_El = document.getElementById('amountA_add');
-  amountB_add_El = document.getElementById('amountB_add');
-  addLiquidityBtn = document.getElementById('addLiquidityBtn');
+// =============================================================================
+//  DOM ELEMENT SELECTORS (Matching your provided HTML)
+// =============================================================================
+const connectWalletBtn = document.getElementById('connectWalletBtn');
+const walletStatus = document.getElementById('walletStatus');
+const walletAddress = document.getElementById('walletAddress');
 
-  setupEventListeners();
+const tabSwap = document.getElementById('tabSwap');
+const tabPool = document.getElementById('tabPool');
+const swapInterface = document.getElementById('swapInterface');
+const poolInterface = document.getElementById('poolInterface');
 
-  if (typeof window.ethereum !== 'undefined') {
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    const accounts = await provider.listAccounts();
-    if (accounts.length > 0) {
-      await connectWallet();
+// --- Swap Interface Elements ---
+const amountInInput = document.getElementById('amountIn');
+const amountOutInput = document.getElementById('amountOut');
+const labelAmountIn = document.getElementById('labelAmountIn');
+const labelAmountOut = document.getElementById('labelAmountOut');
+const invertBtn = document.getElementById('invertBtn');
+const swapBtn = document.getElementById('swapBtn');
+const priceText = document.getElementById('priceText');
+
+// --- Pool Interface Elements ---
+const amountAAddInput = document.getElementById('amountA_add');
+const amountBAddInput = document.getElementById('amountB_add');
+const addLiquidityBtn = document.getElementById('addLiquidityBtn');
+
+const notifications = document.getElementById('notifications');
+
+// =============================================================================
+//  HELPER & UI FUNCTIONS
+// =============================================================================
+
+function showNotification(message, isError = false) {
+    notifications.innerHTML = message;
+    notifications.style.color = isError ? '#e74c3c' : '#2ecc71';
+    console.log(message.replace(/<br>/g, '\n'));
+}
+
+function setLoading(isLoading) {
+    const buttons = [swapBtn, addLiquidityBtn, invertBtn];
+    buttons.forEach(btn => {
+        if(btn) btn.disabled = isLoading;
+    });
+    if (isLoading) {
+        swapBtn.textContent = 'Processing...';
+        addLiquidityBtn.textContent = 'Processing...';
+    } else {
+        swapBtn.textContent = 'Intercambiar';
+        addLiquidityBtn.textContent = 'Añadir Liquidez';
     }
-  } else {
-    updateNotification("Por favor, instala MetaMask para usar esta DApp.");
-    if (connectWalletBtn) connectWalletBtn.disabled = true;
-  }
 }
 
-function setupEventListeners() {
-    connectWalletBtn.addEventListener('click', connectWallet);
-    tabSwap.addEventListener('click', () => switchTab('swap'));
-    tabPool.addEventListener('click', () => switchTab('pool'));
-    invertBtn.addEventListener('click', handleInvertSwap);
-    amountInEl.addEventListener('input', handleAmountInChange);
-    swapBtn.addEventListener('click', handleSwap);
-    addLiquidityBtn.addEventListener('click', handleAddLiquidity);
+/**
+ * @notice Updates swap UI labels and placeholders based on swap direction.
+ */
+function updateSwapUI() {
+    if (state.isSwapInverted) { // Swapping B for A
+        labelAmountIn.textContent = `Enviar (${state.tokenBSymbol})`;
+        labelAmountOut.textContent = `Recibir (${state.tokenASymbol})`;
+    } else { // Swapping A for B
+        labelAmountIn.textContent = `Enviar (${state.tokenASymbol})`;
+        labelAmountOut.textContent = `Recibir (${state.tokenBSymbol})`;
+    }
+    amountInInput.value = '';
+    amountOutInput.value = '';
+    priceText.textContent = 'Cargando precio...';
 }
+
+/**
+ * @notice Calculates and displays the current swap price and output estimate.
+ */
+async function updatePriceAndEstimate() {
+    if (!state.simpleSwapContract) return;
+    try {
+        const [reserveA, reserveB] = await state.simpleSwapContract.getReserves();
+        if (reserveA.isZero() || reserveB.isZero()) {
+            priceText.textContent = 'El pool no tiene liquidez.';
+            swapBtn.disabled = true;
+            return;
+        }
+
+        const reserveIn = state.isSwapInverted ? reserveB : reserveA;
+        const reserveOut = state.isSwapInverted ? reserveA : reserveB;
+
+        // Display price (1 Token In = ? Token Out)
+        const price = reserveOut.mul(ethers.utils.parseUnits("1", 18)).div(reserveIn);
+        const tokenInSymbol = state.isSwapInverted ? state.tokenBSymbol : state.tokenASymbol;
+        const tokenOutSymbol = state.isSwapInverted ? state.tokenASymbol : state.tokenBSymbol;
+        priceText.textContent = `1 ${tokenInSymbol} ≈ ${ethers.utils.formatUnits(price, 18)} ${tokenOutSymbol}`;
+
+        // Estimate output
+        const amountInValue = amountInInput.value;
+        if (amountInValue && parseFloat(amountInValue) > 0) {
+            const amountInWei = ethers.utils.parseUnits(amountInValue, 18);
+            const amountOutWei = amountInWei.mul(reserveOut).div(reserveIn.add(amountInWei)); // (amountIn * reserveOut) / (reserveIn + amountIn)
+            amountOutInput.value = ethers.utils.formatUnits(amountOutWei, 18);
+            swapBtn.disabled = false;
+        } else {
+            amountOutInput.value = '';
+            swapBtn.disabled = true;
+        }
+    } catch (error) {
+        console.error("Price fetch error:", error);
+        priceText.textContent = "Error al obtener el precio.";
+    }
+}
+
+
+// =============================================================================
+//  WEB3 CORE FUNCTIONS
+// =============================================================================
 
 async function connectWallet() {
-  try {
-    await provider.send("eth_requestAccounts", []);
-    signer = provider.getSigner();
-    const address = await signer.getAddress();
-    
-    const erc20ABI = ["function approve(address,uint256) returns (bool)", "function allowance(address,address) view returns (uint256)"];
-    simpleSwapContract = new ethers.Contract(simpleSwapAddress, simpleSwapABI, signer);
-    tokenAContract = new ethers.Contract(tokenA_Address, erc20ABI, signer);
-    tokenBContract = new ethers.Contract(tokenB_Address, erc20ABI, signer);
+    if (typeof window.ethereum === 'undefined') {
+        showNotification('MetaMask no está instalado.', true);
+        return;
+    }
 
-    updateUIForConnection(address);
-    updatePriceDisplay();
-  } catch (error) {
-    console.error("Error connecting wallet:", error);
-    updateNotification("Error al conectar la billetera.");
-  }
-}
+    try {
+        state.provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+        await state.provider.send("eth_requestAccounts", []);
+        state.signer = state.provider.getSigner();
+        state.userAddress = await state.signer.getAddress();
 
-function switchTab(tabName) {
-    if (tabName === 'swap') {
-        swapInterface.style.display = 'block';
-        poolInterface.style.display = 'none';
-        tabSwap.classList.add('active');
-        tabPool.classList.remove('active');
-    } else if (tabName === 'pool') {
-        poolInterface.style.display = 'block';
-        swapInterface.style.display = 'none';
-        tabPool.classList.add('active');
-        tabSwap.classList.remove('active');
+        state.simpleSwapContract = new ethers.Contract(simpleSwapAddress, simpleSwapABI, state.signer);
+        state.tokenAContract = new ethers.Contract(tokenAAddress, erc20ABI, state.signer);
+        state.tokenBContract = new ethers.Contract(tokenBAddress, erc20ABI, state.signer);
+
+        state.tokenASymbol = await state.tokenAContract.symbol();
+        state.tokenBSymbol = await state.tokenBContract.symbol();
+        
+        walletStatus.textContent = 'Status: Connected';
+        walletStatus.style.color = '#2ecc71';
+        walletAddress.textContent = `Address: ${state.userAddress.substring(0, 6)}...${state.userAddress.substring(state.userAddress.length - 4)}`;
+        connectWalletBtn.textContent = 'Connected';
+        connectWalletBtn.disabled = true;
+
+        showNotification('Wallet conectada!', false);
+        updateSwapUI();
+        await updatePriceAndEstimate();
+
+    } catch (error) {
+        console.error('Failed to connect wallet:', error);
+        showNotification(error.message, true);
     }
 }
 
 async function handleAddLiquidity() {
-    const amountA = amountA_add_El.value;
-    const amountB = amountB_add_El.value;
+    const amountA = amountAAddInput.value;
+    const amountB = amountBAddInput.value;
 
     if (!amountA || !amountB || parseFloat(amountA) <= 0 || parseFloat(amountB) <= 0) {
-        updateNotification("Por favor, ingrese montos válidos para ambos tokens.");
+        showNotification("Por favor, introduce montos válidos para ambos tokens.", true);
         return;
     }
 
-    updateNotification("Procesando...");
-    addLiquidityBtn.disabled = true;
+    setLoading(true);
 
     try {
         const amountAWei = ethers.utils.parseUnits(amountA, 18);
         const amountBWei = ethers.utils.parseUnits(amountB, 18);
-        const to = await signer.getAddress();
-        const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
 
-        updateNotification("Aprobando permiso para Token A...");
-        const approveTxA = await tokenAContract.approve(simpleSwapAddress, ethers.constants.MaxUint256);
-        await approveTxA.wait();
+        showNotification(`1/3: Aprobando ${state.tokenASymbol}...`);
+        const approveATx = await state.tokenAContract.approve(simpleSwapAddress, amountAWei);
+        await approveATx.wait();
         
-        updateNotification("Aprobando permiso para Token B...");
-        const approveTxB = await tokenBContract.approve(simpleSwapAddress, ethers.constants.MaxUint256);
-        await approveTxB.wait();
+        showNotification(`2/3: Aprobando ${state.tokenBSymbol}...`);
+        const approveBTx = await state.tokenBContract.approve(simpleSwapAddress, amountBWei);
+        await approveBTx.wait();
         
-        updateNotification("Añadiendo liquidez a la red...");
-        const tx = await simpleSwapContract.addLiquidity(tokenA_Address, tokenB_Address, amountAWei, amountBWei, 0, 0, to, deadline);
-        await tx.wait();
-
-        updateNotification("¡Liquidez añadida exitosamente!");
-        amountA_add_El.value = '';
-        amountB_add_El.value = '';
-        updatePriceDisplay();
+        showNotification('3/3: Añadiendo liquidez...');
+        const addTx = await state.simpleSwapContract.addLiquidity(amountAWei, amountBWei);
+        const receipt = await addTx.wait();
+        
+        showNotification(`Liquidez añadida! Tx: ${receipt.transactionHash.substring(0, 12)}...`, false);
+        amountAAddInput.value = '';
+        amountBAddInput.value = '';
+        await updatePriceAndEstimate();
 
     } catch (error) {
-        console.error("Error en handleAddLiquidity:", error);
-        const reason = error.reason || "La transacción falló. Revisa la consola (F12).";
-        updateNotification(`Error: ${reason}`);
+        console.error("Add liquidity failed:", error);
+        showNotification(`Error: ${error.reason || error.message}`, true);
     } finally {
-        addLiquidityBtn.disabled = false;
-    }
-}
-
-async function handleInvertSwap() {
-    swapDirectionIsAtoB = !swapDirectionIsAtoB;
-    if (swapDirectionIsAtoB) {
-        labelAmountIn.textContent = "Enviar (Token A)";
-        labelAmountOut.textContent = "Recibir (Token B)";
-    } else {
-        labelAmountIn.textContent = "Enviar (Token B)";
-        labelAmountOut.textContent = "Recibir (Token A)";
-    }
-    const temp = amountInEl.value;
-    amountInEl.value = amountOutEl.value;
-    amountOutEl.value = temp;
-    handleAmountInChange();
-    updatePriceDisplay();
-}
-
-async function handleAmountInChange() {
-    const amountInValue = amountInEl.value;
-    if (!amountInValue || parseFloat(amountInValue) <= 0 || !simpleSwapContract) {
-        amountOutEl.value = "";
-        swapBtn.disabled = true;
-        swapBtn.textContent = 'Ingrese un monto';
-        return;
-    }
-    try {
-        const amountInWei = ethers.utils.parseUnits(amountInValue, 18);
-        const tokenInAddr = swapDirectionIsAtoB ? tokenA_Address : tokenB_Address;
-        const tokenOutAddr = swapDirectionIsAtoB ? tokenB_Address : tokenA_Address;
-        const reserveIn = await simpleSwapContract.reserves(tokenInAddr, tokenOutAddr);
-        const reserveOut = await simpleSwapContract.reserves(tokenOutAddr, tokenInAddr);
-        if (reserveIn.isZero() || reserveOut.isZero()) {
-            updateNotification("No hay liquidez en el pool. Añádala en la pestaña 'Pool'.");
-            priceTextEl.textContent = "No hay liquidez";
-            return;
-        }
-        const amountOutWei = await simpleSwapContract.getAmountOut(amountInWei, reserveIn, reserveOut);
-        amountOutEl.value = ethers.utils.formatUnits(amountOutWei, 18);
-        swapBtn.disabled = false;
-        swapBtn.textContent = 'Intercambiar';
-    } catch (error) {
-        console.error("Error calculating output:", error);
-        amountOutEl.value = "Error";
-        swapBtn.disabled = true;
-        swapBtn.textContent = 'Error al estimar';
+        setLoading(false);
     }
 }
 
 async function handleSwap() {
-    updateNotification("Procesando intercambio...");
-    swapBtn.disabled = true;
-    try {
-        const amountInWei = ethers.utils.parseUnits(amountInEl.value, 18);
-        const tokenInAddr = swapDirectionIsAtoB ? tokenA_Address : tokenB_Address;
-        const tokenOutAddr = swapDirectionIsAtoB ? tokenB_Address : tokenA_Address;
-        const to = await signer.getAddress();
-        const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
-        
-        updateNotification("Aprobando permiso para el swap...");
-        const tokenInContract = swapDirectionIsAtoB ? tokenAContract : tokenBContract;
-        const approveTx = await tokenInContract.approve(simpleSwapAddress, ethers.constants.MaxUint256);
-        await approveTx.wait();
-
-        updateNotification("Realizando el intercambio...");
-        const tx = await simpleSwapContract.swapExactTokensForTokens(amountInWei, 0, [tokenInAddr, tokenOutAddr], to, deadline);
-        await tx.wait();
-        updateNotification("¡Swap exitoso!");
-        amountInEl.value = '';
-        amountOutEl.value = '';
-        updatePriceDisplay();
-    } catch (error) {
-        console.error("Error en handleSwap:", error);
-        const reason = error.reason || "La transacción falló. Revisa la consola (F12).";
-        updateNotification(`Error: ${reason}`);
-    } finally {
-        swapBtn.disabled = false;
-    }
-}
-
-function updateNotification(message) {
-    if (notifications) notifications.innerHTML = `<p>${message}</p>`;
-}
-
-function updateUIForConnection(address) {
-    walletStatus.textContent = 'Estado: Conectado';
-    walletAddress.textContent = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-    connectWalletBtn.textContent = 'Billetera Conectada';
-    connectWalletBtn.disabled = true;
-    updateNotification("Billetera conectada. Listo para interactuar.");
-}
-
-async function updatePriceDisplay() {
-    if (!simpleSwapContract) {
-        priceTextEl.textContent = '...';
+    const amountIn = amountInInput.value;
+    if (!amountIn || parseFloat(amountIn) <= 0) {
+        showNotification("Por favor, introduce un monto válido.", true);
         return;
     }
+
+    setLoading(true);
+
     try {
-        const token1Addr = swapDirectionIsAtoB ? tokenA_Address : tokenB_Address;
-        const token2Addr = swapDirectionIsAtoB ? tokenB_Address : tokenA_Address;
-        const token1Symbol = swapDirectionIsAtoB ? "TKA" : "TKB";
-        const token2Symbol = swapDirectionIsAtoB ? "TKB" : "TKA";
-        const priceWei = await simpleSwapContract.getPrice(token1Addr, token2Addr);
-        const priceFormatted = ethers.utils.formatUnits(priceWei, 18);
-        const priceShort = parseFloat(priceFormatted).toFixed(4);
-        priceTextEl.textContent = `1 ${token1Symbol} ≈ ${priceShort} ${token2Symbol}`;
+        const amountInWei = ethers.utils.parseUnits(amountIn, 18);
+        const tokenInAddress = state.isSwapInverted ? tokenBAddress : tokenAAddress;
+        const tokenInContract = state.isSwapInverted ? state.tokenBContract : state.tokenAContract;
+        const tokenInSymbol = state.isSwapInverted ? state.tokenBSymbol : state.tokenASymbol;
+
+        showNotification(`1/2: Aprobando ${tokenInSymbol} para el swap...`);
+        const approveTx = await tokenInContract.approve(simpleSwapAddress, amountInWei);
+        await approveTx.wait();
+
+        showNotification('2/2: Ejecutando el swap...');
+        const swapTx = await state.simpleSwapContract.swap(tokenInAddress, amountInWei);
+        const receipt = await swapTx.wait();
+
+        showNotification(`Swap exitoso! Tx: ${receipt.transactionHash.substring(0, 12)}...`, false);
+        await updatePriceAndEstimate();
+
     } catch (error) {
-        priceTextEl.textContent = "No hay liquidez en el pool";
+        console.error("Swap failed:", error);
+        showNotification(`Error en el swap: ${error.reason || error.message}`, true);
+    } finally {
+        setLoading(false);
     }
 }
+
+// =============================================================================
+//  EVENT LISTENERS
+// =============================================================================
+function initializeDApp() {
+    connectWalletBtn.addEventListener('click', connectWallet);
+
+    tabSwap.addEventListener('click', () => {
+        tabSwap.classList.add('active');
+        tabPool.classList.remove('active');
+        swapInterface.style.display = 'block';
+        poolInterface.style.display = 'none';
+    });
+
+    tabPool.addEventListener('click', () => {
+        tabPool.classList.add('active');
+        tabSwap.classList.remove('active');
+        poolInterface.style.display = 'block';
+        swapInterface.style.display = 'none';
+    });
+    
+    invertBtn.addEventListener('click', () => {
+        state.isSwapInverted = !state.isSwapInverted;
+        updateSwapUI();
+        updatePriceAndEstimate();
+    });
+
+    amountInInput.addEventListener('input', updatePriceAndEstimate);
+    swapBtn.addEventListener('click', handleSwap);
+    addLiquidityBtn.addEventListener('click', handleAddLiquidity);
+
+    if (typeof window.ethereum !== 'undefined') {
+        window.ethereum.on('accountsChanged', () => window.location.reload());
+        window.ethereum.on('chainChanged', () => window.location.reload());
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initializeDApp);
