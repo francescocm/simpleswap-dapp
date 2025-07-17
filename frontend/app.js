@@ -1,4 +1,4 @@
-// frontend/app.js (FINAL VERSION with Liquidity UI)
+// frontend/app.js (DEBUGGING VERSION)
 
 import { ethers } from 'https://cdn.jsdelivr.net/npm/ethers@5.7/dist/ethers.esm.min.js';
 import { simpleSwapAddress, tokenA_Address, tokenB_Address } from './contract-config.js';
@@ -8,33 +8,24 @@ let provider, signer, simpleSwapContract, tokenAContract, tokenBContract;
 let swapDirectionIsAtoB = true; 
 let simpleSwapABI;
 
-// DOM Elements
+// ... (El resto de las declaraciones de variables del DOM) ...
 let connectWalletBtn, walletStatus, walletAddress, swapBtn, notifications,
     tabSwap, tabPool, swapInterface, poolInterface;
-
-// Swap UI Elements
 let amountInEl, amountOutEl, invertBtn, labelAmountIn, labelAmountOut, priceTextEl;
-
-// Pool UI Elements
 let amountA_add_El, amountB_add_El, addLiquidityBtn;
 
-// --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  // Assign DOM elements
+  // ... (Tu función init existente con la asignación de elementos del DOM) ...
   connectWalletBtn = document.getElementById('connectWalletBtn');
   walletStatus = document.getElementById('walletStatus');
   walletAddress = document.getElementById('walletAddress');
   notifications = document.getElementById('notifications');
-  
-  // Tabs
   tabSwap = document.getElementById('tabSwap');
   tabPool = document.getElementById('tabPool');
   swapInterface = document.getElementById('swapInterface');
   poolInterface = document.getElementById('poolInterface');
-
-  // Swap UI
   amountInEl = document.getElementById('amountIn');
   amountOutEl = document.getElementById('amountOut');
   swapBtn = document.getElementById('swapBtn');
@@ -42,13 +33,10 @@ async function init() {
   labelAmountIn = document.getElementById('labelAmountIn');
   labelAmountOut = document.getElementById('labelAmountOut');
   priceTextEl = document.getElementById('priceText');
-  
-  // Pool UI
   amountA_add_El = document.getElementById('amountA_add');
   amountB_add_El = document.getElementById('amountB_add');
   addLiquidityBtn = document.getElementById('addLiquidityBtn');
 
-  // Load ABI
   try {
     const response = await fetch('./SimpleSwap.json');
     const contractJson = await response.json();
@@ -75,17 +63,11 @@ async function init() {
 
 function setupEventListeners() {
     connectWalletBtn.addEventListener('click', connectWallet);
-    
-    // Tab listeners
     tabSwap.addEventListener('click', () => switchTab('swap'));
     tabPool.addEventListener('click', () => switchTab('pool'));
-
-    // Swap listeners
     invertBtn.addEventListener('click', handleInvertSwap);
     amountInEl.addEventListener('input', handleAmountInChange);
     swapBtn.addEventListener('click', handleSwap);
-
-    // Pool listeners
     addLiquidityBtn.addEventListener('click', handleAddLiquidity);
 }
 
@@ -95,7 +77,7 @@ async function connectWallet() {
     signer = provider.getSigner();
     const address = await signer.getAddress();
     
-    const erc20ABI = ["function approve(address,uint256) returns (bool)", "function allowance(address,address) view returns (uint256)", "function balanceOf(address) view returns (uint256)"];
+    const erc20ABI = ["function approve(address,uint256) returns (bool)", "function allowance(address,address) view returns (uint256)"];
     simpleSwapContract = new ethers.Contract(simpleSwapAddress, simpleSwapABI, signer);
     tokenAContract = new ethers.Contract(tokenA_Address, erc20ABI, signer);
     tokenBContract = new ethers.Contract(tokenB_Address, erc20ABI, signer);
@@ -108,23 +90,19 @@ async function connectWallet() {
   }
 }
 
-// --- NEW FUNCTIONS ---
-
-function switchTab(tabName) {
-    if (tabName === 'swap') {
-        swapInterface.style.display = 'block';
-        poolInterface.style.display = 'none';
-        tabSwap.classList.add('active');
-        tabPool.classList.remove('active');
-    } else if (tabName === 'pool') {
-        poolInterface.style.display = 'block';
-        swapInterface.style.display = 'none';
-        tabPool.classList.add('active');
-        tabSwap.classList.remove('active');
-    }
-}
-
+// --- DEBUGGING VERSION of handleAddLiquidity ---
 async function handleAddLiquidity() {
+    console.clear(); // Limpia la consola para ver solo este error
+    console.log("--- INICIANDO handleAddLiquidity ---");
+    
+    // Validar que los objetos de contrato existen
+    if (!simpleSwapContract || !tokenAContract || !tokenBContract) {
+        const errorMsg = "Error Crítico: Los contratos no están inicializados. Conecte la billetera de nuevo.";
+        console.error(errorMsg);
+        updateNotification(errorMsg);
+        return;
+    }
+    
     const amountA = amountA_add_El.value;
     const amountB = amountB_add_El.value;
 
@@ -140,54 +118,85 @@ async function handleAddLiquidity() {
         const amountAWei = ethers.utils.parseUnits(amountA, 18);
         const amountBWei = ethers.utils.parseUnits(amountB, 18);
         const to = await signer.getAddress();
+        const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
 
-        // Approve both tokens before adding liquidity
-        updateNotification("Verificando permisos para Token A...");
-        const allowanceA = await tokenAContract.allowance(to, simpleSwapAddress);
-        if (allowanceA.lt(amountAWei)) {
-            const approveTxA = await tokenAContract.approve(simpleSwapAddress, ethers.constants.MaxUint256);
-            await approveTxA.wait();
-            updateNotification("Permiso para Token A otorgado.");
-        }
+        // Log de cada variable ANTES de la llamada al contrato
+        console.log("1. Parámetro tokenA_Address:", tokenA_Address, `(Tipo: ${typeof tokenA_Address})`);
+        console.log("2. Parámetro tokenB_Address:", tokenB_Address, `(Tipo: ${typeof tokenB_Address})`);
+        console.log("3. Parámetro amountAWei:", amountAWei.toString());
+        console.log("4. Parámetro amountBWei:", amountBWei.toString());
+        console.log("5. Parámetro to (tu dirección):", to, `(Tipo: ${typeof to})`);
+        console.log("6. Parámetro deadline:", deadline);
 
-        updateNotification("Verificando permisos para Token B...");
-        const allowanceB = await tokenBContract.allowance(to, simpleSwapAddress);
-        if (allowanceB.lt(amountBWei)) {
-            const approveTxB = await tokenBContract.approve(simpleSwapAddress, ethers.constants.MaxUint256);
-            await approveTxB.wait();
-            updateNotification("Permiso para Token B otorgado.");
+        // Validar explícitamente las direcciones
+        if (!ethers.utils.isAddress(tokenA_Address) || !ethers.utils.isAddress(tokenB_Address) || !ethers.utils.isAddress(to)) {
+             const errorMsg = "FATAL: Una de las direcciones (tokenA, tokenB, o 'to') no es una dirección válida de Ethereum.";
+             console.error(errorMsg);
+             updateNotification(errorMsg);
+             addLiquidityBtn.disabled = false;
+             return;
         }
         
-        const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
-        updateNotification("Enviando transacción para añadir liquidez...");
+        console.log("Todas las direcciones parecen válidas. Procediendo a llamar al contrato...");
+
+        // Aquí mantenemos la lógica de aprobación
+        updateNotification("Verificando permisos...");
+        const approveTxA = await tokenAContract.approve(simpleSwapAddress, ethers.constants.MaxUint256);
+        await approveTxA.wait();
+        const approveTxB = await tokenBContract.approve(simpleSwapAddress, ethers.constants.MaxUint256);
+        await approveTxB.wait();
+        updateNotification("Permisos otorgados. Enviando transacción...");
+
         const tx = await simpleSwapContract.addLiquidity(
             tokenA_Address,
             tokenB_Address,
             amountAWei,
             amountBWei,
-            0, 0, // No slippage for first liquidity provider
+            0, 0,
             to,
             deadline
         );
+
+        console.log("Transacción enviada a la red. Hash:", tx.hash);
+        updateNotification("Esperando confirmación de la transacción...");
         await tx.wait();
 
         updateNotification(`¡Liquidez añadida exitosamente!`);
         amountA_add_El.value = '';
         amountB_add_El.value = '';
-        updatePriceDisplay(); // Update price after adding liquidity
+        updatePriceDisplay();
 
     } catch (error) {
-        console.error("Error adding liquidity:", error);
-        const reason = error.reason || "La transacción falló.";
+        // Log detallado del error
+        console.error("--- ERROR ATRAPADO EN handleAddLiquidity ---");
+        console.error("Mensaje de error:", error.message);
+        console.error("Razón (si la hay):", error.reason);
+        console.error("Código de error:", error.code);
+        console.error("Objeto de error completo:", error);
+        
+        const reason = error.reason || "La transacción falló. Revisa la consola (F12) para más detalles.";
         updateNotification(`Error: ${reason}`);
     } finally {
         addLiquidityBtn.disabled = false;
+        console.log("--- FINALIZANDO handleAddLiquidity ---");
     }
 }
 
-
-// --- EXISTING FUNCTIONS (no changes needed) ---
-// ... (copia y pega aquí tus funciones handleInvertSwap, handleAmountInChange, handleSwap, etc. tal como estaban) ...
+// ... El resto de tus funciones (switchTab, handleInvertSwap, etc.) no cambian ...
+// Pega el resto de tus funciones aquí
+function switchTab(tabName) {
+    if (tabName === 'swap') {
+        swapInterface.style.display = 'block';
+        poolInterface.style.display = 'none';
+        tabSwap.classList.add('active');
+        tabPool.classList.remove('active');
+    } else if (tabName === 'pool') {
+        poolInterface.style.display = 'block';
+        swapInterface.style.display = 'none';
+        tabPool.classList.add('active');
+        tabSwap.classList.remove('active');
+    }
+}
 async function handleInvertSwap() {
     swapDirectionIsAtoB = !swapDirectionIsAtoB;
     if (swapDirectionIsAtoB) {
@@ -203,7 +212,6 @@ async function handleInvertSwap() {
     handleAmountInChange();
     updatePriceDisplay();
 }
-
 async function handleAmountInChange() {
     const amountInValue = amountInEl.value;
     if (!amountInValue || parseFloat(amountInValue) <= 0 || !simpleSwapContract) {
@@ -234,15 +242,12 @@ async function handleAmountInChange() {
         swapBtn.textContent = 'Error al estimar';
     }
 }
-
 async function handleSwap() {
-    //... (tu función de swap)
+    // ... tu función
 }
-
 function updateNotification(message) {
     notifications.innerHTML = `<p>${message}</p>`;
 }
-
 function updateUIForConnection(address) {
     walletStatus.textContent = 'Estado: Conectado';
     walletAddress.textContent = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
@@ -250,7 +255,6 @@ function updateUIForConnection(address) {
     connectWalletBtn.disabled = true;
     updateNotification("Billetera conectada. Listo para interactuar.");
 }
-
 async function updatePriceDisplay() {
     if (!simpleSwapContract) {
         priceTextEl.textContent = '';
