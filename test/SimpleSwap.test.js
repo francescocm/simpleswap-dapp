@@ -1,137 +1,156 @@
+// test/SimpleSwap.test.js
+
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-// 'describe' es un contenedor para un conjunto de pruebas.
-describe("SimpleSwap Contract", function () {
-    // Estas variables serán usadas en todas nuestras pruebas.
-    let simpleSwap;
-    let tokenA;
-    let tokenB;
-    let owner;
-    let user1;
-    let user2;
+describe("SimpleSwap Contract Tests", function () {
+  // Declare variables to be used across tests
+  let SimpleSwap, simpleSwap, MockERC20, tokenA, tokenB, deployer, user;
+  
+  const DEADLINE = Math.floor(Date.now() / 1000) + 60 * 20; // 20 minutes from now
 
-    // 'beforeEach' se ejecuta antes de cada prueba ('it' block).
-    // Esto asegura que cada prueba comience desde un estado limpio.
-    beforeEach(async function () {
-        // 1. Obtener las cuentas de prueba que Hardhat nos proporciona.
-        [owner, user1, user2] = await ethers.getSigners();
+  // This `beforeEach` block runs before each `it` block, ensuring a clean state for every test.
+  beforeEach(async function () {
+    // Get signers from Hardhat's local environment
+    [deployer, user] = await ethers.getSigners();
 
-        // 2. Desplegar nuestro contrato SimpleSwap.
-        const SimpleSwapFactory = await ethers.getContractFactory("SimpleSwap");
-        simpleSwap = await SimpleSwapFactory.deploy();
-        await simpleSwap.waitForDeployment();
+    // Deploy Mock ERC20 token contracts
+    MockERC20 = await ethers.getContractFactory("MockERC20");
+    tokenA = await MockERC20.deploy("Token A", "TKA");
+    tokenB = await MockERC20.deploy("Token B", "TKB");
 
-        // 3. Desplegar nuestros dos tokens de prueba (Mocks).
-        const MockERC20Factory = await ethers.getContractFactory("MockERC20");
-        tokenA = await MockERC20Factory.deploy("Token A", "TKA");
-        await tokenA.waitForDeployment();
+    // Deploy the main SimpleSwap contract
+    SimpleSwap = await ethers.getContractFactory("SimpleSwap");
+    simpleSwap = await SimpleSwap.deploy();
+
+    // Mint initial tokens for the deployer and a generic user
+    await tokenA.mint(deployer.address, ethers.parseEther("1000"));
+    await tokenB.mint(deployer.address, ethers.parseEther("1000"));
+    await tokenA.mint(user.address, ethers.parseEther("500"));
+    await tokenB.mint(user.address, ethers.parseEther("500"));
+
+    // Approve the SimpleSwap contract to spend tokens on behalf of the deployer and user.
+    // This is a crucial step for `transferFrom` to work.
+    await tokenA.connect(deployer).approve(simpleSwap.target, ethers.MaxUint256);
+    await tokenB.connect(deployer).approve(simpleSwap.target, ethers.MaxUint256);
+    await tokenA.connect(user).approve(simpleSwap.target, ethers.MaxUint256);
+    await tokenB.connect(user).approve(simpleSwap.target, ethers.MaxUint256);
+  });
+
+  describe("Liquidity Management", function () {
+    it("Should add liquidity correctly for the first time and emit LiquidityAdded event", async function () {
+      const amountA = ethers.parseEther("100");
+      const amountB = ethers.parseEther("200");
+
+      // Check that the addLiquidity transaction emits the correct event with correct values
+      await expect(simpleSwap.connect(deployer).addLiquidity(tokenA.target, tokenB.target, amountA, amountB, 0, 0, deployer.address, DEADLINE))
+        .to.emit(simpleSwap, "LiquidityAdded")
+        .withArgs(deployer.address, tokenA.target, tokenB.target, amountA, amountB, ethers.parseEther("141.42135623730950488")); // sqrt(100*200)
+      
+      // Verify that the contract's reserves and token balances are updated
+      expect(await simpleSwap.reserves(tokenA.target, tokenB.target)).to.equal(amountA);
+      expect(await tokenA.balanceOf(simpleSwap.target)).to.equal(amountA);
+    });
+
+    it("Should fail to add liquidity if deadline has passed", async function () {
+        const expiredDeadline = Math.floor(Date.now() / 1000) - 1; // 1 second in the past
+        await expect(simpleSwap.connect(deployer).addLiquidity(tokenA.target, tokenB.target, 1, 1, 0, 0, deployer.address, expiredDeadline))
+          .to.be.revertedWith("SS:EXPIRED");
+    });
+    
+    it("Should remove liquidity correctly", async function () {
+      // First, add liquidity
+      const amountA_add = ethers.parseEther("100");
+      const amountB_add = ethers.parseEther("100");
+      await simpleSwap.connect(deployer).addLiquidity(tokenA.target, tokenB.target, amountA_add, amountB_add, 0, 0, deployer.address, DEADLINE);
+
+      const liquidity = await simpleSwap.liquidity(tokenA.target, tokenB.target, deployer.address);
+      expect(liquidity).to.be.gt(0);
+
+      const initialBalanceA = await tokenA.balanceOf(deployer.address);
+
+      // Now, remove the liquidity
+      await expect(simpleSwap.connect(deployer).removeLiquidity(tokenA.target, tokenB.target, liquidity, 0, 0, deployer.address, DEADLINE))
+        .to.emit(simpleSwap, "LiquidityRemoved");
+
+      // Check balances after removal
+      expect(await simpleSwap.liquidity(tokenA.target, tokenB.target, deployer.address)).to.equal(0);
+      expect(await tokenA.balanceOf(deployer.address)).to.be.gt(initialBalanceA);
+    });
+
+    it("Should fail to remove more liquidity than the user has", async function () {
+        const liquidityAmount = ethers.parseEther("1");
+        // Attempting to remove liquidity from a pool that hasn't been created yet
+        await expect(simpleSwap.connect(user).removeLiquidity(tokenA.target, tokenB.target, liquidityAmount, 0, 0, user.address, DEADLINE))
+            .to.be.revertedWith("SS:INSUF_LIQ");
+    });
+  });
+
+  describe("Swapping", function () {
+    beforeEach(async function() {
+        // Pre-fill the pool with liquidity for swap tests
+        await simpleSwap.connect(deployer).addLiquidity(
+            tokenA.target,
+            tokenB.target,
+            ethers.parseEther("500"),
+            ethers.parseEther("500"),
+            0,
+            0,
+            deployer.address,
+            DEADLINE
+        );
+    });
+
+    it("Should perform a swap of exact tokens for tokens successfully", async function () {
+      const amountIn = ethers.parseEther("10");
+      const userBalanceBefore = await tokenB.balanceOf(user.address);
+      
+      await expect(simpleSwap.connect(user).swapExactTokensForTokens(amountIn, 0, [tokenA.target, tokenB.target], user.address, DEADLINE))
+        .to.emit(simpleSwap, "Swap");
+
+      const userBalanceAfter = await tokenB.balanceOf(user.address);
+      expect(userBalanceAfter).to.be.gt(userBalanceBefore);
+    });
+
+    it("Should fail a swap if the output amount is less than the minimum required", async function () {
+        const amountIn = ethers.parseEther("10");
+        const highAmountOutMin = ethers.parseEther("10"); // An impossibly high minimum output
+        await expect(simpleSwap.connect(user).swapExactTokensForTokens(amountIn, highAmountOutMin, [tokenA.target, tokenB.target], user.address, DEADLINE))
+            .to.be.revertedWith("SS:INSUF_OUTPUT");
+    });
+
+    it("Should fail a swap with an invalid path", async function () {
+        const amountIn = ethers.parseEther("1");
+        await expect(simpleSwap.connect(user).swapExactTokensForTokens(amountIn, 0, [tokenA.target], user.address, DEADLINE))
+            .to.be.revertedWith("SS:INVALID_PATH");
+    });
+  });
+
+  describe("View and Pure Functions", function () {
+    it("getPrice should return a price if liquidity exists", async function () {
+        await simpleSwap.connect(deployer).addLiquidity(tokenA.target, tokenB.target, ethers.parseEther("100"), ethers.parseEther("200"), 0, 0, deployer.address, DEADLINE);
+        const price = await simpleSwap.getPrice(tokenA.target, tokenB.target);
+        // Price of A in terms of B should be 200/100 = 2
+        expect(price).to.equal(ethers.parseEther("2"));
+    });
+
+    it("getPrice should revert if no liquidity exists", async function () {
+        await expect(simpleSwap.getPrice(tokenA.target, tokenB.target))
+            .to.be.revertedWith("SS:NO_RESERVES");
+    });
+
+    it("getAmountOut should calculate the correct output amount", async function () {
+        const amountIn = ethers.parseEther("10");
+        const reserveIn = ethers.parseEther("100");
+        const reserveOut = ethers.parseEther("100");
+        const expectedAmountOut = await simpleSwap.getAmountOut(amountIn, reserveIn, reserveOut);
         
-        tokenB = await MockERC20Factory.deploy("Token B", "TKB");
-        await tokenB.waitForDeployment();
-
-        // 4. Repartir algunos tokens a nuestros usuarios de prueba para que puedan interactuar.
-        const initialAmount = ethers.parseUnits("1000", 18); 
-        await tokenA.mint(owner.address, initialAmount);
-        await tokenB.mint(owner.address, initialAmount);
-
-        await tokenA.mint(user1.address, initialAmount);
-        await tokenB.mint(user1.address, initialAmount);
-
-        // 5. Los usuarios deben aprobar que el contrato SimpleSwap gaste sus tokens.
-        const maxApproval = ethers.MaxUint256; // Aprobar una cantidad máxima para no tener que hacerlo de nuevo.
-        await tokenA.connect(owner).approve(simpleSwap.target, maxApproval);
-        await tokenB.connect(owner).approve(simpleSwap.target, maxApproval);
-
-        await tokenA.connect(user1).approve(simpleSwap.target, maxApproval);
-        await tokenB.connect(user1).approve(simpleSwap.target, maxApproval);
+        // Formula: (10 * 100) / (100 + 10) = 1000 / 110 = 9.0909...
+        expect(expectedAmountOut).to.equal(ethers.parseEther("9.090909090909090909"));
     });
 
-    // Prueba 1: Verifica el despliegue
-    it("Should deploy all contracts correctly", function () {
-        expect(simpleSwap.target).to.not.be.null;
-        expect(simpleSwap.target).to.not.be.undefined;
-        
-        expect(tokenA.target).to.not.be.null;
-        expect(tokenB.target).to.not.be.null;
+    it("getAmountOut should revert with zero input", async function () {
+        await expect(simpleSwap.getAmountOut(0, 1, 1)).to.be.revertedWith("SS:ZERO_INPUT");
     });
-
-    // Prueba 2: Suite de pruebas para la función addLiquidity
-    describe("addLiquidity", function () {
-        it("Should add liquidity correctly for the first time", async function () {
-            const amountA = ethers.parseUnits("100", 18);
-            const amountB = ethers.parseUnits("200", 18);
-
-            await expect(simpleSwap.connect(owner).addLiquidity(
-                tokenA.target,
-                tokenB.target,
-                amountA,
-                amountB,
-                0, 0, owner.address,
-                (await ethers.provider.getBlock('latest')).timestamp + 120
-            )).to.emit(simpleSwap, "LiquidityAdded");
-
-            expect(await simpleSwap.reserves(tokenA.target, tokenB.target)).to.equal(amountA);
-            expect(await simpleSwap.reserves(tokenB.target, tokenA.target)).to.equal(amountB);
-            
-            expect(await tokenA.balanceOf(simpleSwap.target)).to.equal(amountA);
-            expect(await tokenB.balanceOf(simpleSwap.target)).to.equal(amountB);
-
-            const userLiquidity = await simpleSwap.liquidity(tokenA.target, tokenB.target, owner.address);
-            expect(userLiquidity).to.be.gt(0);
-
-            const totalLiquidity = await simpleSwap.totalLiquidity(tokenA.target, tokenB.target);
-            expect(totalLiquidity).to.equal(userLiquidity);
-        });
-    });
-
-    // Prueba 3: Suite de pruebas para la función swapExactTokensForTokens
-    describe("swapExactTokensForTokens", function () {
-        it("Should swap tokens correctly", async function () {
-            // --- 1. Configuración: Añadir liquidez inicial ---
-            const amountA_liq = ethers.parseUnits("100", 18);
-            const amountB_liq = ethers.parseUnits("200", 18);
-            await simpleSwap.connect(owner).addLiquidity(
-                tokenA.target,
-                tokenB.target,
-                amountA_liq,
-                amountB_liq,
-                0, 0, owner.address,
-                (await ethers.provider.getBlock('latest')).timestamp + 120
-            );
-
-            // --- 2. Preparación del Swap ---
-            const amountIn = ethers.parseUnits("10", 18);
-            const path = [tokenA.target, tokenB.target];
-
-            const user1_balanceA_before = await tokenA.balanceOf(user1.address);
-            const user1_balanceB_before = await tokenB.balanceOf(user1.address);
-            const contract_balanceA_before = await tokenA.balanceOf(simpleSwap.target);
-            const contract_balanceB_before = await tokenB.balanceOf(simpleSwap.target);
-
-            // --- 3. Ejecución del Swap ---
-            await simpleSwap.connect(user1).swapExactTokensForTokens(
-                amountIn,
-                0, // amountOutMin
-                path,
-                user1.address,
-                (await ethers.provider.getBlock('latest')).timestamp + 120
-            );
-
-            // --- 4. Verificación de resultados ---
-            const user1_balanceA_after = await tokenA.balanceOf(user1.address);
-            const user1_balanceB_after = await tokenB.balanceOf(user1.address);
-            const contract_balanceA_after = await tokenA.balanceOf(simpleSwap.target);
-            const contract_balanceB_after = await tokenB.balanceOf(simpleSwap.target);
-            
-            expect(user1_balanceA_after).to.equal(user1_balanceA_before - amountIn);
-            expect(user1_balanceB_after).to.be.gt(user1_balanceB_before);
-            expect(contract_balanceA_after).to.equal(contract_balanceA_before + amountIn);
-            expect(contract_balanceB_after).to.be.lt(contract_balanceB_before);
-
-            const amountOut = contract_balanceB_before - contract_balanceB_after;
-            expect(await simpleSwap.reserves(tokenA.target, tokenB.target)).to.equal(contract_balanceA_before + amountIn);
-            expect(await simpleSwap.reserves(tokenB.target, tokenA.target)).to.equal(contract_balanceB_before - amountOut);
-        });
-    });
+  });
 });
