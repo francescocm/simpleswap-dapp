@@ -1,20 +1,19 @@
 // =============================================================================
-//  SimpleSwap DApp Frontend Logic - FINAL AND WORKING VERSION
-//  This version uses the new, correct contract addresses you just deployed.
-//  This is the definitive file for your project.
+//  SimpleSwap DApp Frontend Logic - FINAL, COMPLETE, AND INTELLIGENT VERSION
+//  This version handles the logic for both initial and subsequent liquidity providers,
+//  preventing the "execution reverted" error. This is the complete and final solution.
 // =============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
     // =============================================================================
     //  CONFIGURATION (YOUR NEW, CORRECT CONTRACT ADDRESSES)
-    //  These addresses are from your successful deployment on Sepolia.
     // =============================================================================
     const contractAddress = ethers.utils.getAddress("0x2438fAED6Aac675E64625E900B25B25956403163");
     const tokenAAddress = ethers.utils.getAddress("0x07Ae78493B8B375c5cD73e7244c9538Af5F26d42");
     const tokenBAddress = ethers.utils.getAddress("0xB57aA4d3cE23f629B3E7dBaf6d41cFd938dce8C3");
 
     // =============================================================================
-    //  ABIs (Application Binary Interfaces)
+    //  ABIs
     // =============================================================================
     const contractABI = [
         "function addLiquidity(uint256 amountADesired, uint256 amountBDesired) external returns (uint256 amountA, uint256 amountB)",
@@ -23,11 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         "function tokenA() public view returns (address)",
         "function tokenB() public view returns (address)"
     ];
-    const tokenABI = [
-        "function approve(address spender, uint256 amount) external returns (bool)",
-        "function balanceOf(address account) external view returns (uint256)",
-        "function symbol() external view returns (string)"
-    ];
+    const tokenABI = ["function approve(address spender, uint256 amount) external returns (bool)", "function balanceOf(address account) external view returns (uint256)", "function symbol() external view returns (string)"];
 
     // =============================================================================
     //  STATE AND DOM SELECTORS
@@ -50,8 +45,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const invertBtn = document.getElementById('invertBtn');
     const swapBtn = document.getElementById('swapBtn');
     const priceText = document.getElementById('priceText');
+    const poolInfoText = document.getElementById('poolInfoText');
     const amountAAddInput = document.getElementById('amountA_add');
     const amountBAddInput = document.getElementById('amountB_add');
+    const amountAAddLabel = document.getElementById('amountA_add_label');
+    const amountBAddLabel = document.getElementById('amountB_add_label');
     const addLiquidityBtn = document.getElementById('addLiquidityBtn');
     const notifications = document.getElementById('notifications');
 
@@ -75,14 +73,43 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const updateSwapUI = () => {
-        const inSymbol = isSwapInverted ? tokenBSymbol : tokenASymbol;
-        const outSymbol = isSwapInverted ? tokenASymbol : tokenBSymbol;
-        labelAmountIn.textContent = `Send (${inSymbol})`;
-        labelAmountOut.textContent = `Receive (${outSymbol})`;
-        amountInInput.value = '';
-        amountOutInput.value = '';
+        labelAmountIn.textContent = `Send (${isSwapInverted ? tokenBSymbol : tokenASymbol})`;
+        labelAmountOut.textContent = `Receive (${isSwapInverted ? tokenASymbol : tokenBSymbol})`;
+        amountInInput.value = ''; amountOutInput.value = '';
         priceText.textContent = 'Calculating price...';
         swapBtn.disabled = true;
+    };
+
+    const calculateLiquidityRatio = async () => {
+        if (!contract) return;
+        try {
+            const [reserveA, reserveB] = await contract.getReserves();
+            
+            if (reserveA.isZero() || reserveB.isZero()) {
+                // Pool is empty, user can set the price.
+                poolInfoText.textContent = "You are the first liquidity provider. The ratio you set will determine the initial price.";
+                amountBAddInput.readOnly = false;
+                return;
+            }
+
+            // Pool has liquidity, user must respect the ratio.
+            poolInfoText.textContent = "To add liquidity, you must supply tokens at the current pool ratio.";
+            amountBAddInput.readOnly = true;
+            
+            const amountA = amountAAddInput.value;
+            if (amountA && parseFloat(amountA) > 0) {
+                const amountAWei = ethers.utils.parseUnits(amountA, 18);
+                // amountB = (amountA * reserveB) / reserveA
+                const amountBWei = amountAWei.mul(reserveB).div(reserveA);
+                amountBAddInput.value = parseFloat(ethers.utils.formatUnits(amountBWei, 18)).toPrecision(6);
+            } else {
+                amountBAddInput.value = '';
+            }
+
+        } catch (error) {
+            console.error("Error calculating liquidity ratio:", error);
+            showNotification("Could not calculate liquidity ratio.", true);
+        }
     };
 
     const updatePriceAndEstimate = async () => {
@@ -133,6 +160,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tokenASymbol = await tokenA.symbol();
             tokenBSymbol = await tokenB.symbol();
+            
+            amountAAddLabel.textContent = `Amount ${tokenASymbol}`;
+            amountBAddLabel.textContent = `Amount ${tokenBSymbol}`;
 
             walletStatus.textContent = 'Status: Connected';
             walletAddress.textContent = `Wallet: ${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
@@ -142,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             updateSwapUI();
             updatePriceAndEstimate();
+            calculateLiquidityRatio(); // Set initial state for the pool tab
         } catch (error) {
             console.error('Failed to connect wallet:', error);
             showNotification(`Error: ${error.reason || error.message}`, true);
@@ -240,6 +271,8 @@ document.addEventListener('DOMContentLoaded', () => {
     amountInInput.addEventListener('input', updatePriceAndEstimate);
     addLiquidityBtn.addEventListener('click', addLiquidity);
     swapBtn.addEventListener('click', swap);
+    // NEW event listener to enable the intelligent liquidity logic
+    amountAAddInput.addEventListener('input', calculateLiquidityRatio);
 
     notifications.textContent = 'Welcome. Please connect your wallet to begin.';
 });

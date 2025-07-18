@@ -1,10 +1,8 @@
 <!DOCTYPE html>
-<!-- Changed language to English -->
 <html lang="en"> 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Changed title for consistency -->
     <title>SimpleSwap DApp - Module 4</title> 
     <link rel="stylesheet" href="style.css">
 </head>
@@ -12,20 +10,17 @@
     <header>
         <h1>SimpleSwap DApp</h1>
         <div class="wallet-info">
-            <!-- Translated button and status text -->
             <button id="connectWalletBtn">Connect Wallet</button>
             <p id="walletStatus">Status: Disconnected</p>
             <p id="walletAddress"></p>
         </div>
     </header>
     <main class="container">
-        <!-- Tabs are already in English, which is correct -->
         <div class="tabs">
             <button id="tabSwap" class="tab-button active">Swap</button>
             <button id="tabPool" class="tab-button">Pool</button>
         </div>
 
-        <!-- SWAP INTERFACE: Translated all text to English -->
         <div id="swapInterface" class="card">
             <h2>Make a Swap</h2>
             <div class="input-group"><label for="amountIn" id="labelAmountIn">Send</label><input type="number" id="amountIn" placeholder="0.0" step="any"></div>
@@ -35,28 +30,27 @@
             <button id="swapBtn" class="cta-button" disabled>Swap</button>
         </div>
 
-        <!-- POOL INTERFACE: Translated all text to English -->
         <div id="poolInterface" class="card" style="display: none;">
             <h2>Add Liquidity</h2>
-            <p class="info-text">As the first liquidity provider, the ratio of tokens you supply will set the initial price.</p>
-            <div class="input-group">
-                <label for="amountA_add">Amount Token A</label>
-                <input type="number" id="amountA_add" placeholder="0.0" step="any">
-            </div>
-            <div class="input-group">
-                <label for="amountB_add">Amount Token B</label>
-                <input type="number" id="amountB_add" placeholder="0.0" step="any">
+            <p id="poolInfoText" class="info-text">Supply tokens to the liquidity pool.</p>
+            <div class="pool-inputs">
+                <div class="input-group">
+                    <label id="amountA_add_label" for="amountA_add">Amount Token A</label>
+                    <input type="number" id="amountA_add" placeholder="0.0" step="any">
+                </div>
+                <div class="input-group">
+                    <label id="amountB_add_label" for="amountB_add">Amount Token B</label>
+                    <input type="number" id="amountB_add" placeholder="0.0" step="any">
+                </div>
             </div>
             <button id="addLiquidityBtn" class="cta-button">Add Liquidity</button>
         </div>
 
-        <!-- NOTIFICATIONS AREA: Translated default text to English -->
         <div id="notifications" class="notifications-area">
             <p>Status messages will be displayed here.</p>
         </div>
     </main>
 
-    <!-- Correct and robust script tags -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js" type="application/javascript"></script>
     <script src="app.js"></script>
 </body>
