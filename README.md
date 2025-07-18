@@ -1,81 +1,88 @@
-# SimpleSwap DApp - Trabajo Práctico Módulo 4
+# SimpleSwap DApp - Trabajo Práctico Final
 
-Este repositorio contiene el proyecto final para el Módulo 4 del curso de Blockchain. El objetivo es construir un frontend completamente funcional y un conjunto de tests para un contrato inteligente de intercambio de tokens (SimpleSwap) desarrollado en el Módulo 3.
-
-**Live Demo:** [https://simpleswap-dapp.vercel.app](https://simpleswap-dapp.vercel.app)
+Este repositorio contiene el código fuente para el Trabajo Práctico Final del Módulo 4, que consiste en una DApp de intercambio descentralizado (DEX) simple construida sobre la red de prueba Sepolia.
 
 ---
 
-## ▶️ Características Principales
+## 🚀 DApp Desplegada en Vercel
 
-La DApp implementa todas las funcionalidades requeridas para un exchange descentralizado básico:
+**Puedes interactuar con la aplicación en vivo aquí:**
 
-*   ✅ **Conexión con Billetera:** Se integra con MetaMask para conectar la billetera del usuario.
-*   ✅ **Swap Bidireccional:** Permite intercambiar Token A por Token B y viceversa.
-*   ✅ **Estimación de Salida en Tiempo Real:** Calcula y muestra la cantidad estimada de tokens a recibir antes de realizar la transacción.
-*   ✅ **Visualización de Precio:** Muestra el tipo de cambio actual entre los dos tokens, que se actualiza después de cada swap.
-*   ✅ **Aprobación Dinámica de Tokens:** Si el contrato no tiene los permisos necesarios para realizar el swap, la DApp solicita automáticamente al usuario que firme una transacción de `approve` antes de continuar.
-*   ✅ **Notificaciones de Estado:** Proporciona feedback claro al usuario durante todo el ciclo de vida de la transacción.
+[**https://simpleswap-dapp.vercel.app/**](https://simpleswap-dapp.vercel.app/)
+
+---
+
+## 👨‍🏫 Cómo Usar la DApp (Guía para el usuario)
+
+Para probar la DApp, por favor sigue estos pasos:
+
+1.  **Instalar MetaMask:** Asegúrate de tener la extensión de navegador MetaMask instalada.
+2.  **Seleccionar Red Sepolia:** Abre MetaMask y cambia la red a "Sepolia Testnet".
+3.  **Usar la Cuenta Correcta:** La DApp funcionará con cualquier cuenta, pero **para tener un balance de tokens (TKA y TKB) y poder añadir liquidez o hacer swaps, es necesario usar la cuenta que desplegó los contratos**. Esta cuenta ya posee los tokens iniciales. La clave privada de esta cuenta se encuentra en el archivo `.env` del proyecto.
+4.  **Conectar Billetera:** Abre el enlace de la DApp y haz clic en "Connect Wallet".
+5.  **Probar Funcionalidades:**
+    *   **Swap:** Intercambia tokens TKA por TKB (y viceversa) en la pestaña "Swap".
+    *   **Pool:** Añade más liquidez al pool en la pestaña "Pool".
+
+---
+
+## ✨ Características
+
+*   **Contratos Inteligentes en Solidity:** Contrato `SimpleSwap.sol` optimizado y con documentación NatSpec completa.
+*   **Conexión con MetaMask:** Integración con Ethers.js para conectar billeteras de forma segura.
+*   **Intercambio de Tokens (Swap):** Permite a los usuarios intercambiar entre dos tokens ERC20 (TKA y TKB).
+*   **Provisión de Liquidez:** Permite a los usuarios añadir liquidez al pool de intercambio.
+*   **Cobertura de Tests:** Pruebas exhaustivas realizadas con Hardhat y Chai, superando el 50% de cobertura requerido.
 
 ---
 
 ## 🛠️ Stack Tecnológico
 
-*   **Smart Contracts:** Solidity `^0.8.0`
+*   **Blockchain:** Ethereum (Sepolia Testnet)
+*   **Contratos Inteligentes:** Solidity `^0.8.0`
 *   **Entorno de Desarrollo:** Hardhat
 *   **Librería Frontend:** Ethers.js
-*   **Testing:** Hardhat (con Chai & Ethers)
-*   **Dependencias de Contratos:** OpenZeppelin Contracts (para MockERC20)
-*   **Frontend:** HTML5, CSS3, JavaScript (ESM)
-*   **Despliegue:** Video de demostración (ver enlace arriba).
+*   **Despliegue:** Vercel
 
 ---
 
-## 🚀 Cómo Ejecutar el Proyecto Localmente
+## 📄 Información de Despliegue (Sepolia Testnet)
 
-Siga estos pasos para configurar y ejecutar el proyecto en su máquina local.
+Las direcciones de los contratos desplegados en la red de prueba Sepolia son las siguientes:
 
-### Prerrequisitos
+*   **Red:** `Sepolia Testnet`
+*   **SimpleSwap Contract:** [`0x2438fAED6Aac675E64625E900B25B25956403163`](https://sepolia.etherscan.io/address/0x2438fAED6Aac675E64625E900B25B25956403163)
+*   **Token A (TKA):** [`0x07Ae78493B8B375c5cD73e7244c9538Af5F26d42`](https://sepolia.etherscan.io/address/0x07Ae78493B8B375c5cD73e7244c9538Af5F26d42)
+*   **Token B (TKB):** [`0xB57aA4d3cE23f629B3E7dBaf6d41cFd938dce8C3`](https://sepolia.etherscan.io/address/0xB57aA4d3cE23f629B3E7dBaf6d41cFd938dce8C3)
+*   **Cuenta Deployer:** [`0xef50261Ab49E27183503AACdEd9f4E9b9F033445`](https://sepolia.etherscan.io/address/0xef50261Ab49E27183503AACdEd9f4E9b9F033445)
 
-*   Node.js (v18 o superior)
-*   NPM / NPX
-*   Git
-*   MetaMask (extensión del navegador)
+---
 
-### 1. Clonar el Repositorio
+## 💻 Desarrollo Local
 
-```bash
-git clone https://github.com/francescocm/simpleswap-dapp.git
-cd simpleswap-dapp
+Si deseas ejecutar este proyecto localmente:
 
-2. Instalar Dependencias
-Instale todas las dependencias del proyecto necesarias para Hardhat.
-bash
-npm install
+1.  Clona el repositorio:
+    ```bash
+    git clone https://github.com/francescocm/simpleswap-dapp.git
+    ```
+2.  Instala las dependencias:
+    ```bash
+    cd simpleswap-dapp
+    npm install
+    ```
+3.  Crea un archivo `.env` en la raíz del proyecto y añade tu `PRIVATE_KEY` y tu `ALCHEMY_API_KEY`.
+4.  Para ejecutar los tests:
+    ```bash
+    npx hardhat test
+    ```
+5.  Para desplegar en una red (ej. Sepolia):
+    ```bash
+    npx hardhat run scripts/deploy.js --network sepolia
+    ```
 
-3. Iniciar el Nodo Local de Hardhat
-Este comando iniciará una blockchain local en su máquina. Dejar esta terminal abierta.
-bash
-npx hardhat node
-Al iniciarse, Hardhat le proporcionará una lista de 20 cuentas de prueba con sus claves privadas. Copie la clave privada (Private Key) de la primera cuenta (0xf39...), ya que la necesitaremos para MetaMask.
+---
 
-4. Desplegar los Contratos
-Abra una segunda terminal y ejecute el script de despliegue. Este script desplegará los contratos de tokens y el SimpleSwap, acuñará tokens iniciales, establecerá los permisos (approve) y añadirá liquidez inicial al pool.
-bash
-npx hardhat run scripts/deploy.js --network localhost
+## ✒️ Autor
 
-5. Configurar MetaMask
-Abra MetaMask y seleccione "Añadir red manualmente".
-Configure la red de Hardhat con los siguientes datos:
-Nombre de la red: Hardhat Local
-Nueva URL de RPC: http://127.0.0.1:8545
-ID de cadena: 31337
-Símbolo de moneda: ETH
-Importe la cuenta del desplegador. Haga clic en el círculo de su cuenta -> "Importar cuenta" y pegue la clave privada que copió en el paso 3. Esta cuenta tendrá TKA y TKB para intercambiar.
-
-6. Ejecutar el Frontend
-El frontend es un sitio estático. La forma más fácil de servirlo es usando la extensión Live Server en Visual Studio Code.
-Abra el proyecto en VS Code.
-Haga clic derecho sobre el archivo frontend/index.html.
-Seleccione "Open with Live Server".
-¡Listo! La DApp se abrirá en su navegador, lista para conectar su cuenta de MetaMask importada y realizar intercambios.
+*   **Francesco Centarti Maestu** - [francescocm](https://github.com/francescocm)
