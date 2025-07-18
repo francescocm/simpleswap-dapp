@@ -1,57 +1,62 @@
 <!DOCTYPE html>
-<html lang="es">
+<!-- Changed language to English -->
+<html lang="en"> 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SimpleSwap DApp - Módulo 4</title>
+    <!-- Changed title for consistency -->
+    <title>SimpleSwap DApp - Module 4</title> 
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
         <h1>SimpleSwap DApp</h1>
         <div class="wallet-info">
-            <button id="connectWalletBtn">Conectar Billetera</button>
-            <p id="walletStatus">Estado: Desconectado</p>
+            <!-- Translated button and status text -->
+            <button id="connectWalletBtn">Connect Wallet</button>
+            <p id="walletStatus">Status: Disconnected</p>
             <p id="walletAddress"></p>
         </div>
     </header>
     <main class="container">
-        <!-- NEW: TABS FOR NAVIGATION -->
+        <!-- Tabs are already in English, which is correct -->
         <div class="tabs">
             <button id="tabSwap" class="tab-button active">Swap</button>
             <button id="tabPool" class="tab-button">Pool</button>
         </div>
 
-        <!-- SWAP INTERFACE (will be hidden/shown by JS) -->
+        <!-- SWAP INTERFACE: Translated all text to English -->
         <div id="swapInterface" class="card">
-            <!-- ... (Tu interfaz de swap existente no cambia) ... -->
-            <h2>Realizar Intercambio</h2>
-            <div class="input-group"><label for="amountIn" id="labelAmountIn">Enviar (Token A)</label><input type="number" id="amountIn" placeholder="0.0" step="any"></div>
+            <h2>Make a Swap</h2>
+            <div class="input-group"><label for="amountIn" id="labelAmountIn">Send</label><input type="number" id="amountIn" placeholder="0.0" step="any"></div>
             <div id="invert-button-container" class="swap-arrow"><button id="invertBtn">&#x21c5;</button></div>
-            <div class="input-group"><label for="amountOut" id="labelAmountOut">Recibir (Token B)</label><input type="number" id="amountOut" placeholder="Estimado..." readonly></div>
-            <div id="price-display" class="price-info"><p id="priceText">Cargando precio...</p></div>
-            <button id="swapBtn" class="cta-button" disabled>Intercambiar</button>
+            <div class="input-group"><label for="amountOut" id="labelAmountOut">Receive</label><input type="number" id="amountOut" placeholder="Estimated..." readonly></div>
+            <div id="price-display" class="price-info"><p id="priceText">Loading price...</p></div>
+            <button id="swapBtn" class="cta-button" disabled>Swap</button>
         </div>
 
-        <!-- NEW: LIQUIDITY POOL INTERFACE (hidden by default) -->
+        <!-- POOL INTERFACE: Translated all text to English -->
         <div id="poolInterface" class="card" style="display: none;">
-            <h2>Añadir Liquidez</h2>
-            <p class="info-text">Como primer proveedor, la proporción que establezcas determinará el precio inicial del pool.</p>
+            <h2>Add Liquidity</h2>
+            <p class="info-text">As the first liquidity provider, the ratio of tokens you supply will set the initial price.</p>
             <div class="input-group">
-                <label for="amountA_add">Monto Token A</label>
+                <label for="amountA_add">Amount Token A</label>
                 <input type="number" id="amountA_add" placeholder="0.0" step="any">
             </div>
             <div class="input-group">
-                <label for="amountB_add">Monto Token B</label>
+                <label for="amountB_add">Amount Token B</label>
                 <input type="number" id="amountB_add" placeholder="0.0" step="any">
             </div>
-            <button id="addLiquidityBtn" class="cta-button">Añadir Liquidez</button>
+            <button id="addLiquidityBtn" class="cta-button">Add Liquidity</button>
         </div>
 
+        <!-- NOTIFICATIONS AREA: Translated default text to English -->
         <div id="notifications" class="notifications-area">
-            <p>Aquí se mostrarán los mensajes de estado.</p>
+            <p>Status messages will be displayed here.</p>
         </div>
     </main>
+
+    <!-- Script tags are correct and preserved -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js" type="application/javascript"></script>
     <script src="app.js"></script>
 </body>

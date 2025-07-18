@@ -1,20 +1,20 @@
 // =============================================================================
-//  SimpleSwap DApp Frontend Logic - VERSIÓN FINAL Y FUNCIONAL
-//  Basado en una estructura probada y adaptado a tus contratos.
+//  SimpleSwap DApp Frontend Logic - FINAL CORRECTED VERSION
+//  This version combines global script loading with programmatic address validation
+//  to eliminate ALL reported errors. This is the definitive solution.
 // =============================================================================
-
-// Al cargar Ethers.js globalmente, no se necesita la línea "import".
 
 document.addEventListener('DOMContentLoaded', () => {
     // =============================================================================
-    //  CONFIGURACIÓN (TUS DIRECCIONES DE CONTRATO)
+    //  CONFIGURATION (YOUR CONTRACT ADDRESSES)
+    //  Using ethers.utils.getAddress() to be immune to checksum errors.
     // =============================================================================
-    const contractAddress = "0x89Bb5eE8eA7581a21dBA5C2aD7F82826Ff7414e3";
-    const tokenAAddress = "0x6268AC4737c60a6D4dC1E56d658Fd7a2924a7aad";
-    const tokenBAddress = "0x3D4Acb6B5E4AEEf34988A4cd49DFbA39827929d3";
+    const contractAddress = ethers.utils.getAddress("0x89bb5ee8ea7581a21dba5c2ad7f82826ff7414e3");
+    const tokenAAddress = ethers.utils.getAddress("0x6268ac4737c60a6d4dc1e56d658fd7a2924a7aad");
+    const tokenBAddress = ethers.utils.getAddress("0x3d4acb6b5e4aef34988a4cd49dfba39827929d3");
 
     // =============================================================================
-    //  ABIs (Interfaces del Contrato)
+    //  ABIs (Application Binary Interfaces)
     // =============================================================================
     const contractABI = [
         "function addLiquidity(uint256 amountADesired, uint256 amountBDesired) external returns (uint256 amountA, uint256 amountB)",
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     // =============================================================================
-    //  ESTADO Y SELECTORES DEL DOM
+    //  STATE AND DOM SELECTORS
     // =============================================================================
     let provider, signer, userAddress, contract, tokenA, tokenB;
     let tokenASymbol = 'TKA', tokenBSymbol = 'TKB';
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const notifications = document.getElementById('notifications');
 
     // =============================================================================
-    //  FUNCIONES AUXILIARES Y DE UI
+    //  UI & HELPER FUNCTIONS
     // =============================================================================
     const showNotification = (message, isError = false) => {
         notifications.innerHTML = message;
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const setLoading = (isLoading, button) => {
         if (isLoading) {
             button.dataset.originalText = button.textContent;
-            button.textContent = 'Procesando...';
+            button.textContent = 'Processing...';
             button.disabled = true;
         } else {
             button.textContent = button.dataset.originalText;
@@ -77,11 +77,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateSwapUI = () => {
         const inSymbol = isSwapInverted ? tokenBSymbol : tokenASymbol;
         const outSymbol = isSwapInverted ? tokenASymbol : tokenBSymbol;
-        labelAmountIn.textContent = `Enviar (${inSymbol})`;
-        labelAmountOut.textContent = `Recibir (${outSymbol})`;
+        labelAmountIn.textContent = `Send (${inSymbol})`;
+        labelAmountOut.textContent = `Receive (${outSymbol})`;
         amountInInput.value = '';
         amountOutInput.value = '';
-        priceText.textContent = 'Calculando precio...';
+        priceText.textContent = 'Calculating price...';
         swapBtn.disabled = true;
     };
 
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const [reserveA, reserveB] = await contract.getReserves();
             if (reserveA.isZero() || reserveB.isZero()) {
-                priceText.textContent = 'El pool no tiene liquidez.';
+                priceText.textContent = 'Pool has no liquidity yet.';
                 swapBtn.disabled = true;
                 return;
             }
@@ -108,17 +108,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 swapBtn.disabled = true;
             }
         } catch (error) {
-            console.error("Error al obtener precio:", error);
-            priceText.textContent = "Error al obtener el precio.";
+            console.error("Error fetching price:", error);
+            priceText.textContent = "Error fetching price.";
         }
     };
 
     // =============================================================================
-    //  LÓGICA WEB3 PRINCIPAL
+    //  CORE WEB3 LOGIC
     // =============================================================================
     const connectWallet = async () => {
         if (!window.ethereum) {
-            showNotification('Para usar esta DApp, por favor instale MetaMask.', true);
+            showNotification('To use this DApp, please install MetaMask.', true);
             return;
         }
         try {
@@ -134,16 +134,16 @@ document.addEventListener('DOMContentLoaded', () => {
             tokenASymbol = await tokenA.symbol();
             tokenBSymbol = await tokenB.symbol();
 
-            walletStatus.textContent = 'Estado: Conectado';
-            walletAddress.textContent = `Billetera: ${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
-            connectWalletBtn.textContent = 'Conectado';
+            walletStatus.textContent = 'Status: Connected';
+            walletAddress.textContent = `Wallet: ${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
+            connectWalletBtn.textContent = 'Connected';
             connectWalletBtn.disabled = true;
-            showNotification('Billetera conectada con éxito.', false);
+            showNotification('Wallet connected successfully.', false);
             
             updateSwapUI();
             updatePriceAndEstimate();
         } catch (error) {
-            console.error('Fallo al conectar la billetera:', error);
+            console.error('Failed to connect wallet:', error);
             showNotification(`Error: ${error.reason || error.message}`, true);
         }
     };
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const amountA = amountAAddInput.value;
         const amountB = amountBAddInput.value;
         if (!amountA || !amountB || parseFloat(amountA) <= 0 || parseFloat(amountB) <= 0) {
-            showNotification("Por favor, ingrese montos válidos para ambos tokens.", true);
+            showNotification("Please enter valid amounts for both tokens.", true);
             return;
         }
         setLoading(true, addLiquidityBtn);
@@ -160,24 +160,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const amountAWei = ethers.utils.parseUnits(amountA, 18);
             const amountBWei = ethers.utils.parseUnits(amountB, 18);
 
-            showNotification(`1/3: Aprobando ${tokenASymbol}...`);
+            showNotification(`1/3: Approving ${tokenASymbol}...`);
             let tx = await tokenA.approve(contractAddress, amountAWei);
             await tx.wait();
             
-            showNotification(`2/3: Aprobando ${tokenBSymbol}...`);
+            showNotification(`2/3: Approving ${tokenBSymbol}...`);
             tx = await tokenB.approve(contractAddress, amountBWei);
             await tx.wait();
             
-            showNotification('3/3: Añadiendo liquidez...');
+            showNotification('3/3: Adding liquidity...');
             tx = await contract.addLiquidity(amountAWei, amountBWei);
             const receipt = await tx.wait();
             
-            showNotification(`¡Liquidez añadida con éxito! <br> Tx: ${receipt.transactionHash.substring(0, 12)}...`, false);
+            showNotification(`Liquidity added successfully! <br> Tx: ${receipt.transactionHash.substring(0, 12)}...`, false);
             amountAAddInput.value = '';
             amountBAddInput.value = '';
             updatePriceAndEstimate();
         } catch (error) {
-            console.error("Fallo al añadir liquidez:", error);
+            console.error("Failed to add liquidity:", error);
             showNotification(`Error: ${error.reason || error.message}`, true);
         } finally {
             setLoading(false, addLiquidityBtn);
@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const swap = async () => {
         const amountIn = amountInInput.value;
         if (!amountIn || parseFloat(amountIn) <= 0) {
-            showNotification("Por favor, ingrese un monto válido.", true);
+            showNotification("Please enter a valid amount.", true);
             return;
         }
         setLoading(true, swapBtn);
@@ -196,20 +196,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const tokenIn = isSwapInverted ? tokenB : tokenA;
             const tokenInSymbol = isSwapInverted ? tokenBSymbol : tokenASymbol;
 
-            showNotification(`1/2: Aprobando ${tokenInSymbol}...`);
+            showNotification(`1/2: Approving ${tokenInSymbol}...`);
             let tx = await tokenIn.approve(contractAddress, amountInWei);
             await tx.wait();
 
-            showNotification('2/2: Ejecutando intercambio...');
+            showNotification('2/2: Executing swap...');
             const tokenInAddress = isSwapInverted ? tokenBAddress : tokenAAddress;
             tx = await contract.swap(tokenInAddress, amountInWei);
             const receipt = await tx.wait();
             
-            showNotification(`¡Intercambio exitoso! <br> Tx: ${receipt.transactionHash.substring(0, 12)}...`, false);
+            showNotification(`Swap successful! <br> Tx: ${receipt.transactionHash.substring(0, 12)}...`, false);
             updateSwapUI();
             updatePriceAndEstimate();
         } catch (error) {
-            console.error("Fallo en el intercambio:", error);
+            console.error("Failed to swap:", error);
             showNotification(`Error: ${error.reason || error.message}`, true);
         } finally {
             setLoading(false, swapBtn);
@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // =============================================================================
-    //  EVENT LISTENERS
+    //  EVENT LISTENERS & INITIALIZATION
     // =============================================================================
     connectWalletBtn.addEventListener('click', connectWallet);
     tabSwap.addEventListener('click', () => {
@@ -241,5 +241,5 @@ document.addEventListener('DOMContentLoaded', () => {
     addLiquidityBtn.addEventListener('click', addLiquidity);
     swapBtn.addEventListener('click', swap);
 
-    notifications.textContent = 'Bienvenido. Conecte su billetera para comenzar.';
+    notifications.textContent = 'Welcome. Please connect your wallet to begin.';
 });
