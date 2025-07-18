@@ -1,12 +1,12 @@
 // =============================================================================
-//  SimpleSwap DApp Frontend Logic - FINAL, COMPLETE, AND INTELLIGENT VERSION
-//  This version handles the logic for both initial and subsequent liquidity providers,
-//  preventing the "execution reverted" error. This is the complete and final solution.
+//  SimpleSwap DApp Frontend Logic - FINAL, PRECISION-CORRECTED VERSION
+//  This version fixes the subtle rounding error by using BigNumber math exclusively
+//  for liquidity calculations, solving the "execution reverted" error.
 // =============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
     // =============================================================================
-    //  CONFIGURATION (YOUR NEW, CORRECT CONTRACT ADDRESSES)
+    //  CONFIGURATION (Correct, confirmed addresses)
     // =============================================================================
     const contractAddress = ethers.utils.getAddress("0x2438fAED6Aac675E64625E900B25B25956403163");
     const tokenAAddress = ethers.utils.getAddress("0x07Ae78493B8B375c5cD73e7244c9538Af5F26d42");
@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let provider, signer, userAddress, contract, tokenA, tokenB;
     let tokenASymbol = 'TKA', tokenBSymbol = 'TKB';
     let isSwapInverted = false;
+    let reserves = { reserveA: ethers.BigNumber.from(0), reserveB: ethers.BigNumber.from(0) };
 
     const connectWalletBtn = document.getElementById('connectWalletBtn');
     const walletStatus = document.getElementById('walletStatus');
@@ -80,49 +81,53 @@ document.addEventListener('DOMContentLoaded', () => {
         swapBtn.disabled = true;
     };
 
-    const calculateLiquidityRatio = async () => {
-        if (!contract) return;
+    // THIS FUNCTION IS NOW PRECISE
+    const handlePoolInputChange = () => {
+        if (reserves.reserveA.isZero() || reserves.reserveB.isZero()) {
+            return; // Do nothing if pool is empty, user has free input.
+        }
         try {
-            const [reserveA, reserveB] = await contract.getReserves();
-            
-            if (reserveA.isZero() || reserveB.isZero()) {
-                // Pool is empty, user can set the price.
-                poolInfoText.textContent = "You are the first liquidity provider. The ratio you set will determine the initial price.";
-                amountBAddInput.readOnly = false;
-                return;
-            }
-
-            // Pool has liquidity, user must respect the ratio.
-            poolInfoText.textContent = "To add liquidity, you must supply tokens at the current pool ratio.";
-            amountBAddInput.readOnly = true;
-            
-            const amountA = amountAAddInput.value;
-            if (amountA && parseFloat(amountA) > 0) {
-                const amountAWei = ethers.utils.parseUnits(amountA, 18);
+            const amountAStr = amountAAddInput.value;
+            if (amountAStr && parseFloat(amountAStr) > 0) {
+                const amountAWei = ethers.utils.parseUnits(amountAStr, 18);
                 // amountB = (amountA * reserveB) / reserveA
-                const amountBWei = amountAWei.mul(reserveB).div(reserveA);
-                amountBAddInput.value = parseFloat(ethers.utils.formatUnits(amountBWei, 18)).toPrecision(6);
+                const amountBWei = amountAWei.mul(reserves.reserveB).div(reserves.reserveA);
+                amountBAddInput.value = ethers.utils.formatUnits(amountBWei, 18);
             } else {
                 amountBAddInput.value = '';
             }
-
-        } catch (error) {
-            console.error("Error calculating liquidity ratio:", error);
-            showNotification("Could not calculate liquidity ratio.", true);
+        } catch (e) {
+            // Handle cases where user types invalid numbers
+            amountBAddInput.value = '';
+        }
+    };
+    
+    // THIS FUNCTION NOW ONLY UPDATES THE UI STATE
+    const updatePoolUIState = () => {
+        if (reserves.reserveA.isZero() || reserves.reserveB.isZero()) {
+            poolInfoText.textContent = "You are the first liquidity provider. The ratio you set will determine the initial price.";
+            amountBAddInput.readOnly = false;
+        } else {
+            poolInfoText.textContent = "To add liquidity, you must supply tokens at the current pool ratio.";
+            amountBAddInput.readOnly = true;
         }
     };
 
-    const updatePriceAndEstimate = async () => {
+    const updateAllData = async () => {
         if (!contract) return;
         try {
-            const [reserveA, reserveB] = await contract.getReserves();
-            if (reserveA.isZero() || reserveB.isZero()) {
+            const [rA, rB] = await contract.getReserves();
+            reserves = { reserveA: rA, reserveB: rB };
+            updatePoolUIState();
+            
+            // Logic from old updatePriceAndEstimate
+            if (reserves.reserveA.isZero() || reserves.reserveB.isZero()) {
                 priceText.textContent = 'Pool has no liquidity yet.';
                 swapBtn.disabled = true;
                 return;
             }
-            const reserveIn = isSwapInverted ? reserveB : reserveA;
-            const reserveOut = isSwapInverted ? reserveA : reserveB;
+            const reserveIn = isSwapInverted ? reserves.reserveB : reserves.reserveA;
+            const reserveOut = isSwapInverted ? reserves.reserveA : reserves.reserveB;
             const amountInValue = amountInInput.value;
 
             if (amountInValue && parseFloat(amountInValue) > 0) {
@@ -135,8 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 swapBtn.disabled = true;
             }
         } catch (error) {
-            console.error("Error fetching price:", error);
-            priceText.textContent = "Error fetching price.";
+            console.error("Error fetching data:", error);
         }
     };
 
@@ -171,25 +175,26 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification('Wallet connected successfully.', false);
             
             updateSwapUI();
-            updatePriceAndEstimate();
-            calculateLiquidityRatio(); // Set initial state for the pool tab
+            await updateAllData();
         } catch (error) {
             console.error('Failed to connect wallet:', error);
             showNotification(`Error: ${error.reason || error.message}`, true);
         }
     };
 
+    // THIS FUNCTION IS NOW PRECISE
     const addLiquidity = async () => {
-        const amountA = amountAAddInput.value;
-        const amountB = amountBAddInput.value;
-        if (!amountA || !amountB || parseFloat(amountA) <= 0 || parseFloat(amountB) <= 0) {
-            showNotification("Please enter valid amounts for both tokens.", true);
+        const amountAStr = amountAAddInput.value;
+        const amountBStr = amountBAddInput.value;
+        if (!amountAStr || !amountBStr || parseFloat(amountAStr) <= 0 || parseFloat(amountBStr) <= 0) {
+            showNotification("Please enter valid amounts.", true);
             return;
         }
         setLoading(true, addLiquidityBtn);
         try {
-            const amountAWei = ethers.utils.parseUnits(amountA, 18);
-            const amountBWei = ethers.utils.parseUnits(amountB, 18);
+            // Convert to BigNumber here, ensuring precision.
+            const amountAWei = ethers.utils.parseUnits(amountAStr, 18);
+            const amountBWei = ethers.utils.parseUnits(amountBStr, 18);
 
             showNotification(`1/3: Approving ${tokenASymbol}...`);
             let tx = await tokenA.approve(contractAddress, amountAWei);
@@ -206,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification(`Liquidity added successfully! <br> Tx: ${receipt.transactionHash.substring(0, 12)}...`, false);
             amountAAddInput.value = '';
             amountBAddInput.value = '';
-            updatePriceAndEstimate();
+            await updateAllData();
         } catch (error) {
             console.error("Failed to add liquidity:", error);
             showNotification(`Error: ${error.reason || error.message}`, true);
@@ -238,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             showNotification(`Swap successful! <br> Tx: ${receipt.transactionHash.substring(0, 12)}...`, false);
             updateSwapUI();
-            updatePriceAndEstimate();
+            await updateAllData();
         } catch (error) {
             console.error("Failed to swap:", error);
             showNotification(`Error: ${error.reason || error.message}`, true);
@@ -252,27 +257,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // =============================================================================
     connectWalletBtn.addEventListener('click', connectWallet);
     tabSwap.addEventListener('click', () => {
-        swapInterface.style.display = 'block';
-        poolInterface.style.display = 'none';
-        tabSwap.classList.add('active');
-        tabPool.classList.remove('active');
+        swapInterface.style.display = 'block'; poolInterface.style.display = 'none';
+        tabSwap.classList.add('active'); tabPool.classList.remove('active');
     });
     tabPool.addEventListener('click', () => {
-        swapInterface.style.display = 'none';
-        poolInterface.style.display = 'block';
-        tabSwap.classList.remove('active');
-        tabPool.classList.add('active');
+        swapInterface.style.display = 'none'; poolInterface.style.display = 'block';
+        tabSwap.classList.remove('active'); tabPool.classList.add('active');
     });
     invertBtn.addEventListener('click', () => {
         isSwapInverted = !isSwapInverted;
-        updateSwapUI();
-        updatePriceAndEstimate();
+        updateSwapUI(); updateAllData();
     });
-    amountInInput.addEventListener('input', updatePriceAndEstimate);
+    amountInInput.addEventListener('input', updateAllData);
     addLiquidityBtn.addEventListener('click', addLiquidity);
     swapBtn.addEventListener('click', swap);
-    // NEW event listener to enable the intelligent liquidity logic
-    amountAAddInput.addEventListener('input', calculateLiquidityRatio);
+    amountAAddInput.addEventListener('input', handlePoolInputChange);
 
     notifications.textContent = 'Welcome. Please connect your wallet to begin.';
 });
