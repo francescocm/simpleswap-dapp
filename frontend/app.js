@@ -1,17 +1,17 @@
 // =============================================================================
-//  SimpleSwap DApp Frontend Logic - FINAL CORRECTED VERSION
-//  This version combines global script loading with programmatic address validation
-//  to eliminate ALL reported errors. This is the definitive solution.
+//  SimpleSwap DApp Frontend Logic - FINAL AND WORKING VERSION
+//  This version uses the new, correct contract addresses you just deployed.
+//  This is the definitive file for your project.
 // =============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
     // =============================================================================
-    //  CONFIGURATION (YOUR CONTRACT ADDRESSES)
-    //  Using ethers.utils.getAddress() to be immune to checksum errors.
+    //  CONFIGURATION (YOUR NEW, CORRECT CONTRACT ADDRESSES)
+    //  These addresses are from your successful deployment on Sepolia.
     // =============================================================================
-    const contractAddress = ethers.utils.getAddress("0x89bb5ee8ea7581a21dba5c2ad7f82826ff7414e3");
-    const tokenAAddress = ethers.utils.getAddress("0x6268ac4737c60a6d4dc1e56d658fd7a2924a7aad");
-    const tokenBAddress = ethers.utils.getAddress("0x3d4acb6b5e4aef34988a4cd49dfba39827929d3");
+    const contractAddress = ethers.utils.getAddress("0x2438fAED6Aac675E64625E900B25B25956403163");
+    const tokenAAddress = ethers.utils.getAddress("0x07Ae78493B8B375c5cD73e7244c9538Af5F26d42");
+    const tokenBAddress = ethers.utils.getAddress("0xB57aA4d3cE23f629B3E7dBaf6d41cFd938dce8C3");
 
     // =============================================================================
     //  ABIs (Application Binary Interfaces)
