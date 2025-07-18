@@ -1,278 +1,245 @@
 // =============================================================================
-//  SimpleSwap DApp Frontend Logic - Final, Polished & Error-Proof Version
-//  Author: Your AI Mentor
-//  Description: This version programmatically fixes checksum errors and provides
-//               a fully polished, professional Spanish UI. This is the final code.
+//  SimpleSwap DApp Frontend Logic - VERSIÓN FINAL Y FUNCIONAL
+//  Basado en una estructura probada y adaptado a tus contratos.
 // =============================================================================
 
-import { ethers } from "https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.esm.min.js";
+// Al cargar Ethers.js globalmente, no se necesita la línea "import".
 
-// =============================================================================
-//  CONFIGURATION (CONTRACT ADDRESSES & ABIs)
-//  Using ethers.utils.getAddress() to be completely immune to checksum errors.
-//  We provide the raw lowercase address and let ethers format it correctly.
-// =============================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // =============================================================================
+    //  CONFIGURACIÓN (TUS DIRECCIONES DE CONTRATO)
+    // =============================================================================
+    const contractAddress = "0x89Bb5eE8eA7581a21dBA5C2aD7F82826Ff7414e3";
+    const tokenAAddress = "0x6268AC4737c60a6D4dC1E56d658Fd7a2924a7aad";
+    const tokenBAddress = "0x3D4Acb6B5E4AEEf34988A4cd49DFbA39827929d3";
 
-const simpleSwapAddress = ethers.utils.getAddress("0x89bb5ee8ea7581a21dba5c2ad7f82826ff7414e3");
-const tokenAAddress = ethers.utils.getAddress("0x6268ac4737c60a6d4dc1e56d658fd7a2924a7aad");
-const tokenBAddress = ethers.utils.getAddress("0x3d4acb6b5e4aef34988a4cd49dfba39827929d3");
+    // =============================================================================
+    //  ABIs (Interfaces del Contrato)
+    // =============================================================================
+    const contractABI = [
+        "function addLiquidity(uint256 amountADesired, uint256 amountBDesired) external returns (uint256 amountA, uint256 amountB)",
+        "function getReserves() public view returns (uint256, uint256)",
+        "function swap(address tokenIn, uint256 amountIn) external returns (uint256 amountOut)",
+        "function tokenA() public view returns (address)",
+        "function tokenB() public view returns (address)"
+    ];
+    const tokenABI = [
+        "function approve(address spender, uint256 amount) external returns (bool)",
+        "function balanceOf(address account) external view returns (uint256)",
+        "function symbol() external view returns (string)"
+    ];
 
-const simpleSwapABI = [
-    "function addLiquidity(uint256 amountADesired, uint256 amountBDesired) external returns (uint256 amountA, uint256 amountB)",
-    "function getReserves() public view returns (uint256, uint256)",
-    "function swap(address tokenIn, uint256 amountIn) external returns (uint256 amountOut)",
-    "function tokenA() public view returns (address)",
-    "function tokenB() public view returns (address)"
-];
+    // =============================================================================
+    //  ESTADO Y SELECTORES DEL DOM
+    // =============================================================================
+    let provider, signer, userAddress, contract, tokenA, tokenB;
+    let tokenASymbol = 'TKA', tokenBSymbol = 'TKB';
+    let isSwapInverted = false;
 
-const erc20ABI = [
-    "function approve(address spender, uint256 amount) external returns (bool)",
-    "function balanceOf(address account) external view returns (uint256)",
-    "function symbol() external view returns (string)"
-];
+    const connectWalletBtn = document.getElementById('connectWalletBtn');
+    const walletStatus = document.getElementById('walletStatus');
+    const walletAddress = document.getElementById('walletAddress');
+    const tabSwap = document.getElementById('tabSwap');
+    const tabPool = document.getElementById('tabPool');
+    const swapInterface = document.getElementById('swapInterface');
+    const poolInterface = document.getElementById('poolInterface');
+    const amountInInput = document.getElementById('amountIn');
+    const amountOutInput = document.getElementById('amountOut');
+    const labelAmountIn = document.getElementById('labelAmountIn');
+    const labelAmountOut = document.getElementById('labelAmountOut');
+    const invertBtn = document.getElementById('invertBtn');
+    const swapBtn = document.getElementById('swapBtn');
+    const priceText = document.getElementById('priceText');
+    const amountAAddInput = document.getElementById('amountA_add');
+    const amountBAddInput = document.getElementById('amountB_add');
+    const addLiquidityBtn = document.getElementById('addLiquidityBtn');
+    const notifications = document.getElementById('notifications');
 
-// =============================================================================
-//  APPLICATION STATE
-// =============================================================================
-let state = {
-    provider: null,
-    signer: null,
-    userAddress: null,
-    simpleSwapContract: null,
-    tokenAContract: null,
-    tokenBContract: null,
-    tokenASymbol: 'TKA',
-    tokenBSymbol: 'TKB',
-    isSwapInverted: false
-};
+    // =============================================================================
+    //  FUNCIONES AUXILIARES Y DE UI
+    // =============================================================================
+    const showNotification = (message, isError = false) => {
+        notifications.innerHTML = message;
+        notifications.style.color = isError ? '#e74c3c' : '#2ecc71';
+    };
 
-// =============================================================================
-//  DOM ELEMENT SELECTORS
-// =============================================================================
-const connectWalletBtn = document.getElementById('connectWalletBtn');
-const walletStatus = document.getElementById('walletStatus');
-const walletAddress = document.getElementById('walletAddress');
+    const setLoading = (isLoading, button) => {
+        if (isLoading) {
+            button.dataset.originalText = button.textContent;
+            button.textContent = 'Procesando...';
+            button.disabled = true;
+        } else {
+            button.textContent = button.dataset.originalText;
+            button.disabled = false;
+        }
+    };
+    
+    const updateSwapUI = () => {
+        const inSymbol = isSwapInverted ? tokenBSymbol : tokenASymbol;
+        const outSymbol = isSwapInverted ? tokenASymbol : tokenBSymbol;
+        labelAmountIn.textContent = `Enviar (${inSymbol})`;
+        labelAmountOut.textContent = `Recibir (${outSymbol})`;
+        amountInInput.value = '';
+        amountOutInput.value = '';
+        priceText.textContent = 'Calculando precio...';
+        swapBtn.disabled = true;
+    };
 
-const tabSwap = document.getElementById('tabSwap');
-const tabPool = document.getElementById('tabPool');
-const swapInterface = document.getElementById('swapInterface');
-const poolInterface = document.getElementById('poolInterface');
+    const updatePriceAndEstimate = async () => {
+        if (!contract) return;
+        try {
+            const [reserveA, reserveB] = await contract.getReserves();
+            if (reserveA.isZero() || reserveB.isZero()) {
+                priceText.textContent = 'El pool no tiene liquidez.';
+                swapBtn.disabled = true;
+                return;
+            }
+            const reserveIn = isSwapInverted ? reserveB : reserveA;
+            const reserveOut = isSwapInverted ? reserveA : reserveB;
+            const amountInValue = amountInInput.value;
 
-const amountInInput = document.getElementById('amountIn');
-const amountOutInput = document.getElementById('amountOut');
-const labelAmountIn = document.getElementById('labelAmountIn');
-const labelAmountOut = document.getElementById('labelAmountOut');
-const invertBtn = document.getElementById('invertBtn');
-const swapBtn = document.getElementById('swapBtn');
-const priceText = document.getElementById('priceText');
+            if (amountInValue && parseFloat(amountInValue) > 0) {
+                const amountInWei = ethers.utils.parseUnits(amountInValue, 18);
+                const amountOutWei = amountInWei.mul(reserveOut).div(reserveIn.add(amountInWei));
+                amountOutInput.value = parseFloat(ethers.utils.formatUnits(amountOutWei, 18)).toPrecision(6);
+                swapBtn.disabled = false;
+            } else {
+                amountOutInput.value = '';
+                swapBtn.disabled = true;
+            }
+        } catch (error) {
+            console.error("Error al obtener precio:", error);
+            priceText.textContent = "Error al obtener el precio.";
+        }
+    };
 
-const amountAAddInput = document.getElementById('amountA_add');
-const amountBAddInput = document.getElementById('amountB_add');
-const addLiquidityBtn = document.getElementById('addLiquidityBtn');
-
-const notifications = document.getElementById('notifications');
-
-// =============================================================================
-//  HELPER & UI FUNCTIONS (Polished Spanish UI)
-// =============================================================================
-
-function showNotification(message, isError = false) {
-    notifications.innerHTML = message;
-    notifications.style.color = isError ? '#e74c3c' : '#2ecc71';
-}
-
-function setLoading(isLoading) {
-    const buttons = [swapBtn, addLiquidityBtn, invertBtn];
-    buttons.forEach(btn => { if(btn) btn.disabled = isLoading; });
-    if (isLoading) {
-        swapBtn.textContent = 'Procesando...';
-        addLiquidityBtn.textContent = 'Procesando...';
-    } else {
-        swapBtn.textContent = 'Intercambiar';
-        addLiquidityBtn.textContent = 'Añadir Liquidez';
-    }
-}
-
-function updateSwapUI() {
-    const inSymbol = state.isSwapInverted ? state.tokenBSymbol : state.tokenASymbol;
-    const outSymbol = state.isSwapInverted ? state.tokenASymbol : state.tokenBSymbol;
-    labelAmountIn.textContent = `Enviar (${inSymbol})`;
-    labelAmountOut.textContent = `Recibir (${outSymbol})`;
-    amountInInput.value = '';
-    amountOutInput.value = '';
-    priceText.textContent = 'Calculando precio...';
-    swapBtn.disabled = true; // Disable until user types an amount
-}
-
-async function updatePriceAndEstimate() {
-    if (!state.simpleSwapContract) return;
-    try {
-        const [reserveA, reserveB] = await state.simpleSwapContract.getReserves();
-        if (reserveA.isZero() || reserveB.isZero()) {
-            priceText.textContent = 'El pool aún no tiene liquidez.';
-            swapBtn.disabled = true;
+    // =============================================================================
+    //  LÓGICA WEB3 PRINCIPAL
+    // =============================================================================
+    const connectWallet = async () => {
+        if (!window.ethereum) {
+            showNotification('Para usar esta DApp, por favor instale MetaMask.', true);
             return;
         }
+        try {
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            signer = provider.getSigner();
+            userAddress = await signer.getAddress();
+            
+            contract = new ethers.Contract(contractAddress, contractABI, signer);
+            tokenA = new ethers.Contract(tokenAAddress, tokenABI, signer);
+            tokenB = new ethers.Contract(tokenBAddress, tokenABI, signer);
 
-        const reserveIn = state.isSwapInverted ? reserveB : reserveA;
-        const reserveOut = state.isSwapInverted ? reserveA : reserveB;
-        const tokenInSymbol = state.isSwapInverted ? state.tokenBSymbol : state.tokenASymbol;
-        const tokenOutSymbol = state.isSwapInverted ? state.tokenASymbol : state.tokenBSymbol;
-        
-        const price = reserveOut.mul(ethers.utils.parseUnits("1", 18)).div(reserveIn);
-        priceText.textContent = `1 ${tokenInSymbol} ≈ ${parseFloat(ethers.utils.formatUnits(price, 18)).toPrecision(6)} ${tokenOutSymbol}`;
+            tokenASymbol = await tokenA.symbol();
+            tokenBSymbol = await tokenB.symbol();
 
-        const amountInValue = amountInInput.value;
-        if (amountInValue && parseFloat(amountInValue) > 0) {
-            const amountInWei = ethers.utils.parseUnits(amountInValue, 18);
-            const amountOutWei = amountInWei.mul(reserveOut).div(reserveIn.add(amountInWei));
-            amountOutInput.value = parseFloat(ethers.utils.formatUnits(amountOutWei, 18)).toPrecision(6);
-            swapBtn.disabled = false;
-        } else {
-            amountOutInput.value = '';
-            swapBtn.disabled = true;
+            walletStatus.textContent = 'Estado: Conectado';
+            walletAddress.textContent = `Billetera: ${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
+            connectWalletBtn.textContent = 'Conectado';
+            connectWalletBtn.disabled = true;
+            showNotification('Billetera conectada con éxito.', false);
+            
+            updateSwapUI();
+            updatePriceAndEstimate();
+        } catch (error) {
+            console.error('Fallo al conectar la billetera:', error);
+            showNotification(`Error: ${error.reason || error.message}`, true);
         }
-    } catch (error) {
-        console.error("Error al obtener precio:", error);
-        priceText.textContent = "Error al obtener el precio.";
-    }
-}
+    };
 
-// =============================================================================
-//  WEB3 CORE FUNCTIONS
-// =============================================================================
+    const addLiquidity = async () => {
+        const amountA = amountAAddInput.value;
+        const amountB = amountBAddInput.value;
+        if (!amountA || !amountB || parseFloat(amountA) <= 0 || parseFloat(amountB) <= 0) {
+            showNotification("Por favor, ingrese montos válidos para ambos tokens.", true);
+            return;
+        }
+        setLoading(true, addLiquidityBtn);
+        try {
+            const amountAWei = ethers.utils.parseUnits(amountA, 18);
+            const amountBWei = ethers.utils.parseUnits(amountB, 18);
 
-async function connectWallet() {
-    if (typeof window.ethereum === 'undefined') {
-        showNotification('Para usar esta DApp, por favor instale MetaMask.', true);
-        return;
-    }
+            showNotification(`1/3: Aprobando ${tokenASymbol}...`);
+            let tx = await tokenA.approve(contractAddress, amountAWei);
+            await tx.wait();
+            
+            showNotification(`2/3: Aprobando ${tokenBSymbol}...`);
+            tx = await tokenB.approve(contractAddress, amountBWei);
+            await tx.wait();
+            
+            showNotification('3/3: Añadiendo liquidez...');
+            tx = await contract.addLiquidity(amountAWei, amountBWei);
+            const receipt = await tx.wait();
+            
+            showNotification(`¡Liquidez añadida con éxito! <br> Tx: ${receipt.transactionHash.substring(0, 12)}...`, false);
+            amountAAddInput.value = '';
+            amountBAddInput.value = '';
+            updatePriceAndEstimate();
+        } catch (error) {
+            console.error("Fallo al añadir liquidez:", error);
+            showNotification(`Error: ${error.reason || error.message}`, true);
+        } finally {
+            setLoading(false, addLiquidityBtn);
+        }
+    };
 
-    try {
-        state.provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-        await state.provider.send("eth_requestAccounts", []);
-        state.signer = state.provider.getSigner();
-        state.userAddress = await state.signer.getAddress();
+    const swap = async () => {
+        const amountIn = amountInInput.value;
+        if (!amountIn || parseFloat(amountIn) <= 0) {
+            showNotification("Por favor, ingrese un monto válido.", true);
+            return;
+        }
+        setLoading(true, swapBtn);
+        try {
+            const amountInWei = ethers.utils.parseUnits(amountIn, 18);
+            const tokenIn = isSwapInverted ? tokenB : tokenA;
+            const tokenInSymbol = isSwapInverted ? tokenBSymbol : tokenASymbol;
 
-        state.simpleSwapContract = new ethers.Contract(simpleSwapAddress, simpleSwapABI, state.signer);
-        state.tokenAContract = new ethers.Contract(tokenAAddress, erc20ABI, state.signer);
-        state.tokenBContract = new ethers.Contract(tokenBAddress, erc20ABI, state.signer);
+            showNotification(`1/2: Aprobando ${tokenInSymbol}...`);
+            let tx = await tokenIn.approve(contractAddress, amountInWei);
+            await tx.wait();
 
-        state.tokenASymbol = await state.tokenAContract.symbol();
-        state.tokenBSymbol = await state.tokenBContract.symbol();
-        
-        walletStatus.textContent = 'Estado: Conectado';
-        walletAddress.textContent = `Billetera: ${state.userAddress.substring(0, 6)}...${state.userAddress.substring(state.userAddress.length - 4)}`;
-        connectWalletBtn.textContent = 'Conectado';
-        connectWalletBtn.disabled = true;
+            showNotification('2/2: Ejecutando intercambio...');
+            const tokenInAddress = isSwapInverted ? tokenBAddress : tokenAAddress;
+            tx = await contract.swap(tokenInAddress, amountInWei);
+            const receipt = await tx.wait();
+            
+            showNotification(`¡Intercambio exitoso! <br> Tx: ${receipt.transactionHash.substring(0, 12)}...`, false);
+            updateSwapUI();
+            updatePriceAndEstimate();
+        } catch (error) {
+            console.error("Fallo en el intercambio:", error);
+            showNotification(`Error: ${error.reason || error.message}`, true);
+        } finally {
+            setLoading(false, swapBtn);
+        }
+    };
 
-        showNotification('Billetera conectada con éxito.', false);
-        updateSwapUI();
-        await updatePriceAndEstimate();
-
-    } catch (error) {
-        console.error('Fallo al conectar la billetera:', error);
-        showNotification(`Error: ${error.reason || error.message}`, true);
-    }
-}
-
-async function handleAddLiquidity() {
-    const amountA = amountAAddInput.value;
-    const amountB = amountBAddInput.value;
-    if (!amountA || !amountB || parseFloat(amountA) <= 0 || parseFloat(amountB) <= 0) {
-        showNotification("Por favor, ingrese montos válidos y positivos para ambos tokens.", true);
-        return;
-    }
-    setLoading(true);
-    try {
-        const amountAWei = ethers.utils.parseUnits(amountA, 18);
-        const amountBWei = ethers.utils.parseUnits(amountB, 18);
-
-        showNotification(`1/3: Solicitando aprobación para ${state.tokenASymbol}...`);
-        await (await state.tokenAContract.approve(simpleSwapAddress, amountAWei)).wait();
-        
-        showNotification(`2/3: Solicitando aprobación para ${state.tokenBSymbol}...`);
-        await (await state.tokenBContract.approve(simpleSwapAddress, amountBWei)).wait();
-        
-        showNotification('3/3: Ejecutando transacción para añadir liquidez...');
-        const tx = await state.simpleSwapContract.addLiquidity(amountAWei, amountBWei);
-        const receipt = await tx.wait();
-        
-        showNotification(`¡Liquidez añadida con éxito! <br> Tx: ${receipt.transactionHash.substring(0, 12)}...`, false);
-        amountAAddInput.value = '';
-        amountBAddInput.value = '';
-        await updatePriceAndEstimate();
-
-    } catch (error) {
-        console.error("Fallo al añadir liquidez:", error);
-        showNotification(`Error: ${error.reason || error.message}`, true);
-    } finally {
-        setLoading(false);
-    }
-}
-
-async function handleSwap() {
-    const amountIn = amountInInput.value;
-    if (!amountIn || parseFloat(amountIn) <= 0) {
-        showNotification("Por favor, ingrese un monto válido y positivo para intercambiar.", true);
-        return;
-    }
-    setLoading(true);
-    try {
-        const amountInWei = ethers.utils.parseUnits(amountIn, 18);
-        const tokenInAddress = state.isSwapInverted ? tokenBAddress : tokenAAddress;
-        const tokenInContract = state.isSwapInverted ? state.tokenBContract : state.tokenAContract;
-        const tokenInSymbol = state.isSwapInverted ? state.tokenBSymbol : state.tokenASymbol;
-
-        showNotification(`1/2: Solicitando aprobación para ${tokenInSymbol}...`);
-        await (await tokenInContract.approve(simpleSwapAddress, amountInWei)).wait();
-
-        showNotification('2/2: Ejecutando el intercambio...');
-        const tx = await state.simpleSwapContract.swap(tokenInAddress, amountInWei);
-        const receipt = await tx.wait();
-
-        showNotification(`¡Intercambio exitoso! <br> Tx: ${receipt.transactionHash.substring(0, 12)}...`, false);
-        await updatePriceAndEstimate();
-
-    } catch (error) {
-        console.error("Fallo en el intercambio:", error);
-        showNotification(`Error: ${error.reason || error.message}`, true);
-    } finally {
-        setLoading(false);
-    }
-}
-
-// =============================================================================
-//  EVENT LISTENERS & INITIALIZATION
-// =============================================================================
-function initializeDApp() {
-    notifications.textContent = 'Bienvenido. Conecte su billetera para comenzar.';
+    // =============================================================================
+    //  EVENT LISTENERS
+    // =============================================================================
     connectWalletBtn.addEventListener('click', connectWallet);
     tabSwap.addEventListener('click', () => {
-        tabSwap.classList.add('active');
-        tabPool.classList.remove('active');
         swapInterface.style.display = 'block';
         poolInterface.style.display = 'none';
+        tabSwap.classList.add('active');
+        tabPool.classList.remove('active');
     });
     tabPool.addEventListener('click', () => {
-        tabPool.classList.add('active');
-        tabSwap.classList.remove('active');
-        poolInterface.style.display = 'block';
         swapInterface.style.display = 'none';
+        poolInterface.style.display = 'block';
+        tabSwap.classList.remove('active');
+        tabPool.classList.add('active');
     });
     invertBtn.addEventListener('click', () => {
-        state.isSwapInverted = !state.isSwapInverted;
+        isSwapInverted = !isSwapInverted;
         updateSwapUI();
         updatePriceAndEstimate();
     });
     amountInInput.addEventListener('input', updatePriceAndEstimate);
-    swapBtn.addEventListener('click', handleSwap);
-    addLiquidityBtn.addEventListener('click', handleAddLiquidity);
+    addLiquidityBtn.addEventListener('click', addLiquidity);
+    swapBtn.addEventListener('click', swap);
 
-    if (typeof window.ethereum !== 'undefined') {
-        window.ethereum.on('accountsChanged', () => window.location.reload());
-        window.ethereum.on('chainChanged', () => window.location.reload());
-    }
-}
-
-document.addEventListener('DOMContentLoaded', initializeDApp);
+    notifications.textContent = 'Bienvenido. Conecte su billetera para comenzar.';
+});
